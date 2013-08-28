@@ -90,11 +90,21 @@ Don't use this yourself; See the macros \"build\" and \"deffx\" below.
                                        (symbol (str k "." (camel (name builder))))))))))
 
 (defmacro build
-  "This helper macro makes it easier to use the [JavaFX builder classes](http://docs.oracle.com/javafx/2/api/javafx/util/Builder.html). Example: (build button (text \"Close me.\") (cancelButton true))."
+  "This helper macro makes it easier to use the [JavaFX builder classes](http://docs.oracle.com/javafx/2/api/javafx/util/Builder.html). You can also use a map, so it is possible to compose the arguments for the builder over time.
+
+**Examples:**
+
+ * `(build button (text \"Close me.\") (cancelButton true))`
+ * `(build button {:text \"Close me.\" :cancelButton true})`"
   [what & args]
-  `(.. ~(get-qualified what) create
-       ~@args
-       build))
+  (if (and (= 1 (count args))
+           (map? (first args)))
+    `(build ~what ~@(for [entry# (keys (first args))]
+                      `(~(symbol (name entry#)) ~((first args) entry#))))
+    
+    `(.. ~(get-qualified what) create
+         ~@args
+         build)))
 
 (defmacro deffx
   "Uses build and assigns the result to a symbol."
