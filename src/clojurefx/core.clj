@@ -1,7 +1,10 @@
 (ns clojurefx.core
   (:require [clojure.string :as str]))
 
+(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
+
 (defn run-later*
+  "Simple wrapper for Platform/runLater. You should use run-later."
   [f]
   (javafx.application.Platform/runLater f))
 
@@ -10,6 +13,7 @@
   `(run-later* (fn [] ~@body)))
 
 (defn run-now*
+  "A modification of run-later waiting for the running method to return. You should use run-now."
   [f]
   (let [result (promise)]
     (run-later
@@ -28,30 +32,6 @@
 (defmacro event-handler [arg & body]
   `(event-handler* (fn ~arg ~@body)))
 
-(def build-reference
-  '{accordion "javafx.scene.control"
-    
-    affine "javafx.scene.transform"
-    
-    anchor "javafx.scene.layout"
-    border-pane "javafx.scene.layout"
-    
-    arc "javafx.scene.shape"
-    arc-to "javafx.scene.shape"
-
-    blend "javafx.scene.effect"
-    bloom "javafx.scene.effect"
-    box-blur "javafx.scene.effect"
-
-    area-chart "javafx.scene.chart"
-    bar-chart "javafx.scene.chart"
-    bubble-chart "javafx.scene.chart"
-    axis "javafx.scene.chart"
-
-    audio-clip "javafx.scene.media"
-
-    bounding-box "javafx.geometry"})
-
 (defn- camel [in]
   (let [in (name in)
         in (str/split in #"-")
@@ -60,7 +40,10 @@
         in (conj (into [] in) "Builder")]
     (apply str in)))
 
-(defn- get-qualified [builder]
+(defn- get-qualified "
+An exhaustive list of [everything implementing the builder pattern](http://docs.oracle.com/javafx/2/api/javafx/util/Builder.html). In the future it will be possible to add entries yourself.<br/>
+Don't use this yourself; See the macros \"build\" and \"deffx\" below.
+" [builder]
   (let [pkgs {"javafx.scene.control" '[accordion button cell check-box check-box-tree-item check-menu-item choice-box
                                        color-picker combo-box context-menu custom-menu-item hyperlink
                                        indexed-cell index-range label list-cell list-view menu-bar menu menu-button menu-item
@@ -106,11 +89,15 @@
                                      (if (not (empty? (filter #(= % builder) (get pkgs k))))
                                        (symbol (str k "." (camel (name builder))))))))))
 
-(defmacro build [what & args]
+(defmacro build
+  "This helper macro makes it easier to use the [JavaFX builder classes](http://docs.oracle.com/javafx/2/api/javafx/util/Builder.html). Example: (build button (text \"Close me.\") (cancelButton true))."
+  [what & args]
   `(.. ~(get-qualified what) create
        ~@args
        build))
 
-(defmacro deffx [name what & args]
+(defmacro deffx
+  "Uses build and assigns the result to a symbol."
+  [name what & args]
   `(def ~name
      (build ~what ~@args)))
