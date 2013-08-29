@@ -1,1 +1,0 @@
-([:dependencies ([marginalia "0.7.1"] [org.clojure/clojure "1.5.1"] [com.oracle/javafx-runtime "2.2.0"] [org.clojure/tools.nrepl "0.2.3"] [clojure-complete/clojure-complete "0.2.3"])])
