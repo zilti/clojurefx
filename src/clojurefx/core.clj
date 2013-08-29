@@ -89,25 +89,34 @@ Don't use this yourself; See the macros \"build\" and \"deffx\" below.
                                      (if (not (empty? (filter #(= % builder) (get pkgs k))))
                                        (symbol (str k "." (camel (name builder))))))))))
 
-(defmacro build
-  "This helper macro makes it easier to use the [JavaFX builder classes](http://docs.oracle.com/javafx/2/api/javafx/util/Builder.html). You can also use a map, so it is possible to compose the arguments for the builder over time.
+(defmacro build"This helper macro makes it easier to use the [JavaFX builder classes](http://docs.oracle.com/javafx/2/api/javafx/util/Builder.html). You can also use a map, so it is possible to compose the arguments for the builder over time.
 
 **Examples:**
 
  * `(build button (text \"Close me.\") (cancelButton true))`
- * `(build button {:text \"Close me.\" :cancelButton true})`"
-  [what & args]
+ * `(build button {:text \"Close me.\" :cancelButton true})`
+"[what & args]
   (if (and (= 1 (count args))
            (map? (first args)))
     `(build ~what ~@(for [entry# (keys (first args))]
                       `(~(symbol (name entry#)) ~((first args) entry#))))
     
-    `(.. ~(get-qualified what) create
-         ~@args
-         build)))
+    `(run-now (.. ~(get-qualified what) ~(symbol "create")
+                  ~@args
+                  ~(symbol "build")))))
 
-(defmacro deffx
-  "Uses build and assigns the result to a symbol."
-  [name what & args]
-  `(def ~name
+(defmacro deffx "
+Uses build and assigns the result to a symbol.
+"[name what & args]
+`(def ~name
      (build ~what ~@args)))
+
+;; # Event handling
+(defmacro add-listener "
+Adds a listener to  prop (\"Property\" gets added automatically) of obj, gets the value and passes it to fun.
+"[obj prop fun]
+  `(.. ~obj
+       ~(symbol (str (name prop) "Property"))
+       (addListener (reify javafx.beans.value.ChangeListener
+                      (changed [c#]
+                        (~fun (.getValue c#)))))))
