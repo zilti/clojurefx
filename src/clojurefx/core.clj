@@ -3,34 +3,24 @@
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
-(defn run-later*
-  "Simple wrapper for Platform/runLater. You should use run-later."
-  [f]
+(defn run-later*"
+Simple wrapper for Platform/runLater. You should use run-later.
+" [f]
   (javafx.application.Platform/runLater f))
 
-(defmacro run-later
-  [& body]
+(defmacro run-later [& body]
   `(run-later* (fn [] ~@body)))
 
-(defn run-now*
-  "A modification of run-later waiting for the running method to return. You should use run-now."
-  [f]
+(defn run-now*"
+A modification of run-later waiting for the running method to return. You should use run-now.
+" [f]
   (let [result (promise)]
     (run-later
      (deliver result (try (f) (catch Throwable e e))))
     @result))
 
-(defmacro run-now
-  [& body]
+(defmacro run-now [& body]
   `(run-now* (fn [] ~@body)))
-
-(defn event-handler*
-  [f]
-  (reify javafx.event.EventHandler
-    (handle [this e] (f e))))
-
-(defmacro event-handler [arg & body]
-  `(event-handler* (fn ~arg ~@body)))
 
 (defn- camel [in]
   (let [in (name in)
@@ -111,7 +101,7 @@ Uses build and assigns the result to a symbol.
 `(def ~name
      (build ~what ~@args)))
 
-;; # Event handling
+;; ### Event handling
 (defmacro add-listener "
 Adds a listener to  prop (\"Property\" gets added automatically) of obj, gets the value and passes it to fun.
 "[obj prop fun]
@@ -120,3 +110,10 @@ Adds a listener to  prop (\"Property\" gets added automatically) of obj, gets th
        (addListener (reify javafx.beans.value.ChangeListener
                       (changed [c#]
                         (~fun (.getValue c#)))))))
+
+(defn event-handler* [f]
+  (reify javafx.event.EventHandler
+    (handle [this e] (f e))))
+
+(defmacro event-handler [arg & body]
+  `(event-handler* (fn ~arg ~@body)))
