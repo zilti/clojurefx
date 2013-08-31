@@ -11,20 +11,18 @@ Simple wrapper for Platform/runLater. You should use run-later.
 (defmacro run-later [& body]
   `(run-later* (fn [] ~@body)))
 
-(declare ^:dynamic *nested?*)
 (defn run-now*"
 A modification of run-later waiting for the running method to return. You should use run-now.
 " [f]
-(let [result (promise)]
-  (run-later
-   (deliver result (try (f) (catch Throwable e e))))
-  @result))
+(if (= "JavaFX Application Thread" (.. Thread currentThread getName))
+  (apply f [])
+  (let [result (promise)]
+    (run-later
+     (deliver result (try (f) (catch Throwable e e))))
+    @result)))
 
 (defmacro run-now [& body]
-  (if *nested?*
-    `((fn [] ~@body))
-    (binding [*nested?* true]
-      `(run-now* (fn [] ~@body)))))
+  `(run-now* (fn [] ~@body)))
 
 (defn- camel [in]
   (let [in (name in)
@@ -106,7 +104,8 @@ Uses build and assigns the result to a symbol.
 
 ;; ### Event handling
 (defmacro add-listener "
-Adds a listener to  prop (\"Property\" gets added automatically) of obj, gets the value and passes it to fun.
+Adds a listener to  prop (\"Property\" gets added automatically) of obj, gets the value and passes it to fun.<br/>
+Example: `(add-listener inputfield focused #(println \"Focus change!\"))`
 "[obj prop fun]
   `(.. ~obj
        ~(symbol (str (name prop) "Property"))

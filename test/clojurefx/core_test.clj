@@ -2,6 +2,8 @@
   (:require [clojure.test :refer :all]
             [clojurefx.core :refer :all]))
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+(deftest runnow
+  (testing "Uses correct thread"
+    (is (= javafx.scene.Scene (type (build scene {})))))
+  (testing "Nested run-nows"
+    (is (= javafx.scene.Scene (type (build scene {:root (build v-box {})}))))))
