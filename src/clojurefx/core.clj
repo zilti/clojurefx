@@ -11,16 +11,20 @@ Simple wrapper for Platform/runLater. You should use run-later.
 (defmacro run-later [& body]
   `(run-later* (fn [] ~@body)))
 
+(declare ^:dynamic *nested?*)
 (defn run-now*"
 A modification of run-later waiting for the running method to return. You should use run-now.
 " [f]
-  (let [result (promise)]
-    (run-later
-     (deliver result (try (f) (catch Throwable e e))))
-    @result))
+(let [result (promise)]
+  (run-later
+   (deliver result (try (f) (catch Throwable e e))))
+  @result))
 
 (defmacro run-now [& body]
-  `(run-now* (fn [] ~@body)))
+  (if *nested?*
+    `((fn [] ~@body))
+    (binding [*nested?* true]
+      `(run-now* (fn [] ~@body)))))
 
 (defn- camel [in]
   (let [in (name in)
@@ -79,7 +83,7 @@ Don't use this yourself; See the macros \"build\" and \"deffx\" below.
                                      (if (not (empty? (filter #(= % builder) (get pkgs k))))
                                        (symbol (str k "." (camel (name builder))))))))))
 
-(defmacro build"This helper macro makes it easier to use the [JavaFX builder classes](http://docs.oracle.com/javafx/2/api/javafx/util/Builder.html). You can also use a map, so it is possible to compose the arguments for the builder over time.
+(defmacro build "This helper macro makes it easier to use the [JavaFX builder classes](http://docs.oracle.com/javafx/2/api/javafx/util/Builder.html). You can also use a map, so it is possible to compose the arguments for the builder over time.
 
 **Examples:**
 
@@ -90,7 +94,6 @@ Don't use this yourself; See the macros \"build\" and \"deffx\" below.
            (map? (first args)))
     `(build ~what ~@(for [entry# (keys (first args))]
                       `(~(symbol (name entry#)) ~((first args) entry#))))
-    
     `(run-now (.. ~(get-qualified what) ~(symbol "create")
                   ~@args
                   ~(symbol "build")))))
