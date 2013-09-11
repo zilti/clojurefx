@@ -129,17 +129,12 @@ Example: `(add-listener inputfield focused #(println \"Focus change!\"))`
 
 ;; ### Tables
 ;; Table data in an atom
-(defn add-listener [coll k l]
-  (with-meta coll (update-in (meta coll) (into [:listener] k) conj l)))
-(defn remove-listener [coll k l]
-  (with-meta coll (update-in (meta coll) (into [:listener] k) (fn [x y] (remove #(= y %) x)) l)))
-
-(defn convert-table-data [d]
-  
-  (add-watch d :ctd (fn [k r old new]))
-  (swap! d javafx.collections.FXCollections/observableList))
+(defn add-listener [coll l]
+  (with-meta coll (update-in (meta coll) [:listener] conj l)))
+(defn remove-listener [coll l]
+  (with-meta coll (update-in (meta coll) [:listener] (fn [x y] (remove #(= y %) x)) l)))
 
 (defmethod argparser 'table-view [[n & rst]]
   (case n
-    items `(items (javafx.collections.FXCollections/observableList ~@rst))
+    items `(items (convert-table-data ~@rst))
     `(~n ~@rst)))
