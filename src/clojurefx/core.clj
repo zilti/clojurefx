@@ -1,5 +1,6 @@
 (ns clojurefx.core
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.data :as cljdata]))
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
@@ -81,6 +82,11 @@ Don't use this yourself; See the macros \"build\" and \"deffx\" below.
                                      (if (not (empty? (filter #(= % builder) (get pkgs k))))
                                        (symbol (str k "." (camel (name builder))))))))))
 
+(defmulti argparser (fn [n] (first n)))
+(defmethod argparser :default [[n & rst]]
+  (case n    
+    `(~n ~@rst)))
+
 (defmacro build "This helper macro makes it easier to use the [JavaFX builder classes](http://docs.oracle.com/javafx/2/api/javafx/util/Builder.html). You can also use a map, so it is possible to compose the arguments for the builder over time.
 
 **Examples:**
@@ -93,7 +99,8 @@ Don't use this yourself; See the macros \"build\" and \"deffx\" below.
     `(build ~what ~@(for [entry# (keys (first args))]
                       `(~(symbol (name entry#)) ~((first args) entry#))))
     `(run-now (.. ~(get-qualified what) ~(symbol "create")
-                  ~@args
+                  ~@(for [arg# args]
+                      (argparser arg#))
                   ~(symbol "build")))))
 
 (defmacro deffx "
@@ -103,7 +110,7 @@ Uses build and assigns the result to a symbol.
      (build ~what ~@args)))
 
 ;; ### Event handling
-(defmacro add-listener "
+(defmacro add-property-listener "
 Adds a listener to  prop (\"Property\" gets added automatically) of obj, gets the value and passes it to fun.<br/>
 Example: `(add-listener inputfield focused #(println \"Focus change!\"))`
 "[obj prop fun]
@@ -119,3 +126,20 @@ Example: `(add-listener inputfield focused #(println \"Focus change!\"))`
 
 (defmacro event-handler [arg & body]
   `(event-handler* (fn ~arg ~@body)))
+
+;; ### Tables
+;; Table data in an atom
+(defn add-listener [coll k l]
+  (with-meta coll (update-in (meta coll) (into [:listener] k) conj l)))
+(defn remove-listener [coll k l]
+  (with-meta coll (update-in (meta coll) (into [:listener] k) (fn [x y] (remove #(= y %) x)) l)))
+
+(defn convert-table-data [d]
+  
+  (add-watch d :ctd (fn [k r old new]))
+  (swap! d javafx.collections.FXCollections/observableList))
+
+(defmethod argparser 'table-view [[n & rst]]
+  (case n
+    items `(items (javafx.collections.FXCollections/observableList ~@rst))
+    `(~n ~@rst)))
