@@ -83,9 +83,8 @@ Don't use this yourself; See the macros \"build\" and \"deffx\" below.
                                        (symbol (str k "." (camel (name builder))))))))))
 
 (defmulti argparser (fn [n] (first n)))
-(defmethod argparser :default [[n & rst]]
-  (case n    
-    `(~n ~@rst)))
+(defmethod argparser :default [arg]
+  arg)
 
 (defmacro build "This helper macro makes it easier to use the [JavaFX builder classes](http://docs.oracle.com/javafx/2/api/javafx/util/Builder.html). You can also use a map, so it is possible to compose the arguments for the builder over time.
 
@@ -127,6 +126,13 @@ Example: `(add-listener inputfield focused #(println \"Focus change!\"))`
 (defmacro event-handler [arg & body]
   `(event-handler* (fn ~arg ~@body)))
 
+(defn callback* [f]
+  (reify javafx.util.Callback
+    (call [this p] (f p))))
+
+(defmacro callback [arg & body]
+  `(callback* (fn ~arg ~@body)))
+
 ;; ### Tables
 ;; Table data in an atom
 (defn add-listener [coll l]
@@ -136,5 +142,28 @@ Example: `(add-listener inputfield focused #(println \"Focus change!\"))`
 
 (defmethod argparser 'table-view [[n & rst]]
   (case n
-    items `(items (convert-table-data ~@rst))
+    items `(items (javafx.collections.FXCollections/observableList ~rst))
     `(~n ~@rst)))
+
+;; Example scaffold
+(def rt (atom (build v-box {:children []})))
+(def scn (atom (build scene {:width 800 :height 600 :root @rt})))
+(def stg (atom (build stage {:title "Hello ClojureFX!" :scene @scn})))
+(run-now (.show @stg))
+
+(def table (new javafx.scene.control.TableView))
+(def tbldata (javafx.collections.FXCollections/observableArrayList [{:a 1 :b 2 :c 3}
+                                                                    {:a 4 :b 5 :c 6}
+                                                                    {:a 7 :b 9 :c 8}]))
+
+(.setAll tbldata [{:a 1 :b 2 :c 3}
+                  {:a 4 :b 5 :c 6}
+                  {:a 7 :b 9 :c 8}])
+
+(.setItems table tbldata)
+(def colA (build table-column {:text "A" :cellValueFactory (new javafx.scene.control.cell.MapValueFactory :a)}))
+(def colB (build table-column {:text "A" :cellValueFactory (new javafx.scene.control.cell.MapValueFactory :b)}))
+(def colC (build table-column {:text "A" :cellValueFactory (new javafx.scene.control.cell.MapValueFactory :c)}))
+(.add (.getColumns table) colC)
+(.getColumns table)
+(run-now (.add (.getChildren @rt) table))
