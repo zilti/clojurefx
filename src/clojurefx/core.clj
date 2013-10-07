@@ -142,7 +142,7 @@ Example: `(add-listener inputfield focused #(println \"Focus change!\"))`
 
 (defmethod argparser 'table-view [[n & rst]]
   (case n
-    items `(items (javafx.collections.FXCollections/observableList ~rst))
+    items `(items (javafx.collections.FXCollections/observableArrayList ~rst))
     `(~n ~@rst)))
 
 ;; Example scaffold
@@ -162,8 +162,10 @@ Example: `(add-listener inputfield focused #(println \"Focus change!\"))`
 
 (.setItems table tbldata)
 (def colA (build table-column {:text "A" :cellValueFactory (new javafx.scene.control.cell.MapValueFactory :a)}))
-(def colB (build table-column {:text "A" :cellValueFactory (new javafx.scene.control.cell.MapValueFactory :b)}))
-(def colC (build table-column {:text "A" :cellValueFactory (new javafx.scene.control.cell.MapValueFactory :c)}))
+(def colB (build table-column {:text "B" :cellValueFactory (new javafx.scene.control.cell.MapValueFactory :b)}))
+(def colC (build table-column {:text "B" :cellValueFactory (new javafx.scene.control.cell.MapValueFactory :c)}))
+(.add (.getColumns table) colA)
+(.add (.getColumns table) colB)
 (.add (.getColumns table) colC)
 (.getColumns table)
 (run-now (.add (.getChildren @rt) table))
