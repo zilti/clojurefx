@@ -4,6 +4,8 @@ pom.xml
 /classes/
 /target/
 .lein-deps-sum
+.lein-repl-history
+.nrepl-port
 *~
 *class
 /docs/
