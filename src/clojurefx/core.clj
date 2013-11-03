@@ -19,7 +19,7 @@ Simple wrapper for Platform/runLater. You should use run-later.
 (defn run-now*"
 A modification of run-later waiting for the running method to return. You should use run-now.
 " [f]
-(if (= "JavaFX Application Thread" (.. Thread currentThread getName))
+(if (javafx.application.Platform/isFxApplicationThread)
   (apply f [])
   (let [result (promise)]
     (run-later
@@ -73,6 +73,8 @@ Runs the code on the FX application thread and waits until the return value is d
 ;; ## Event handling
 ;; ### Properties
 ;; #### Binding
+
+(defn bidirectional-bind-property! [] nil)
 
 (defn bind-property! "Binds a property to an atom.
 Other STM objects might be supported in the future.
