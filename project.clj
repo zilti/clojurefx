@@ -1,4 +1,4 @@
-(defproject clojurefx "0.0.5-SNAPSHOT"
+(defproject clojurefx "0.0.5"
   :description "Helper functions and probably a wrapper to simplify usage of JavaFX in Clojure.
 
 You'll need to have jfxrt.jar in your local maven repository. See [this coderwall protip](https://coderwall.com/p/4yjy1a) for how to make this happen.
@@ -8,5 +8,6 @@ You'll need to have jfxrt.jar in your local maven repository. See [this coderwal
   :lein-release {:deploy-via :clojars}
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.5.1"]]
+  :dependencies [[org.clojure/clojure "1.5.1"]
+                 [org.clojure/tools.trace "0.7.6"]]
   :plugins [[lein-marginalia "0.7.1"]])

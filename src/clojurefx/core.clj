@@ -50,6 +50,7 @@ Runs the code on the FX application thread and waits until the return value is d
 
 ;; ## Encapsulation and preprocessing
 ;; ### KeyCode
+
 (defn- prep-key-code [k]
   {:keycode k
    :name (-> (.getName k) str/lower-case keyword)
@@ -90,6 +91,7 @@ Whenever the content of the atom changes, this change is propagated to the prope
                    (.changed listener observable oldS newS))))))
 
 ;; ### Events
+;; #### Preprocessing
 
 (defn- prep-event-map [e & {:as m}]
   (let [prep {:event e
@@ -156,6 +158,8 @@ Whenever the content of the atom changes, this change is propagated to the prope
                   :meta-down? (.isMetaDown e)
                   :shift-down? (.isShiftDown e)))
 
+;; #### API
+
 (defn add-listener "Adds a listener to a node event.
 The listener gets a preprocessed event map as shown above.
 " [obj event fun]
@@ -219,8 +223,8 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
 " [builder]
 (let [builder (symbol builder)]
   (first (filter (comp not nil?) (for [k (keys @pkgs)]
-                                   (if (not (empty? (filter #(= % builder) (get @pkgs k))))
-                                     (symbol (str k "." (camel (name builder))))))))))
+                                 (if (not (empty? (filter #(= % builder) (get @pkgs k))))
+                                   (symbol (str k "." (camel (name builder))))))))))
 
 (defn method-fetcher "Fetches all public methods of a class." [class]
   (filter #(contains? (:flags %) :public) (filter :return-type (:members (reflect class)))))
@@ -257,14 +261,11 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
 (defmethod construct-node 'javafx.scene.Scene [clazz args]
   (constructor-helper clazz (:root args) (:width args) (:height args) (:depth-buffer args)))
 
-(defmulti wrap-arg (fn [class arg] class))
-(defmethod wrap-arg :default [class arg]
+(defmulti wrap-arg (fn [arg class] arg))
+(defmethod wrap-arg :default [arg class]
   arg)
 
-(defmacro fx "
-The central macro of ClojureFX. This takes the name of a node as declared in the pkgs atom and
-named arguments for the constructor arguments and object setters.
-" [ctrl & {:keys [bind listen] :as args}]
+(defn fx* [ctrl & {:keys [bind listen] :as args}]
   (let [props# bind
         listeners# listen
         qualified-name# (get-qualified ctrl)
@@ -272,7 +273,7 @@ named arguments for the constructor arguments and object setters.
         args# (eval (dissoc args :bind :listen))
         obj# (construct-node qualified-name# args#)
         proc-args# (into {} (for [key# (keys args#)]
-                              (wrap-arg qualified-name# [key# (key# args#)])))]
+                              (wrap-arg [key# (key# args#)] qualified-name#)))]
     (run-now (doseq [arg# proc-args#]
                (if (contains? methods# (key arg#))
                  (((key arg#) methods#) obj# (val arg#))))
@@ -282,12 +283,65 @@ named arguments for the constructor arguments and object setters.
                (add-listener obj# (key listener#) (val listener#)))
              obj#)))
 
+(defmacro fx "
+The central macro of ClojureFX. This takes the name of a node as declared in the pkgs atom and
+named arguments for the constructor arguments and object setters.
+" [ctrl & args]
+  `(fx* '~ctrl ~@args))
+
 (defmacro deffx [name ctrl & props]
   `(def ~name (fx ~ctrl ~@props)))
 
-;; ## Tables
-;; Table data in an atom
-(defn add-listener [coll l]
-  (with-meta coll (update-in (meta coll) [:listener] conj l)))
-(defn remove-listener [coll l]
-  (with-meta coll (update-in (meta coll) [:listener] (fn [x y] (remove #(= y %) x)) l)))
+;; ## Content modification
+;; ### Easy modification of child elements.
+;; Usage: `(swap-content! <object> <modification-function>)`.
+;; The return value of modification-function becomes the new value.
+
+(defmulti swap-content! (fn [obj fun] (class obj)))
+(defmacro def-simple-swapper [clazz getter setter]
+  `(defmethod swap-content! ~clazz [obj# fun#]
+     (let [bunch# (~getter obj#)]
+       (~setter bunch# (fun# (into [] bunch#))))))
+
+(def-simple-swapper javafx.scene.layout.Pane .getChildren .setAll)
+(def-simple-swapper javafx.scene.control.Accordion .getPanes .setAll)
+(def-simple-swapper javafx.scene.control.ChoiceBox .getItems .setAll)
+(def-simple-swapper javafx.scene.control.ColorPicker .getCustomColors .setAll)
+(def-simple-swapper javafx.scene.control.ComboBox .getItems .setAll)
+(def-simple-swapper javafx.scene.control.ContextMenu .getItems .setAll)
+(def-simple-swapper javafx.scene.control.ListView .getItems .setAll)
+(def-simple-swapper javafx.scene.control.Menu .getItems .setAll)
+(def-simple-swapper javafx.scene.control.MenuBar .getMenus .setAll)
+(def-simple-swapper javafx.scene.control.TableColumn .getColumns .setAll)
+(def-simple-swapper javafx.scene.control.TabPane .getTabs .setAll)
+(def-simple-swapper javafx.scene.control.ToggleGroup .getToggles .setAll)
+(def-simple-swapper javafx.scene.control.ToolBar .getItems .setAll)
+(def-simple-swapper javafx.scene.control.TreeItem .getChildren .setAll)
+(def-simple-swapper javafx.scene.control.TreeTableColumn .getColumns .setAll)
+
+(defmethod swap-content! javafx.scene.control.SplitPane [obj fun]
+  (let [data {:items (into [] (.getItems obj))
+              :dividers (into [] (.getDividers obj))}
+        res (fun data)]
+    (.setAll (.getItems obj) (:items res))
+    (.setAll (.getDividers obj) (:dividers res))))
+
+(defmethod swap-content! javafx.scene.control.TableView [obj fun]
+  (let [data {:items (into [] (.getItems obj))
+              :columns (into [] (.getColumns obj))
+              :sort-order (into [] (.getSortOrder obj))
+              :visible-leaf-columns (into [] (.getVisibleLeafColumns obj))}
+        res (fun data)]
+    (.setAll (.getItems obj) (:items res))
+    (.setAll (.getColumns obj) (:columns res))
+    (.setAll (.getSortOrder obj) (:sort-order res))
+    (.setAll (.getVisibleLeafColumns obj) (:visible-leaf-columns res))))
+
+;; TODO TreeTableView
+
+(defmethod swap-content! javafx.scene.control.ScrollPane [obj fun]
+  (.setContent obj (fun (.getContent obj))))
+(defmethod swap-content! javafx.scene.control.TitledPane [obj fun]
+  (.setContent obj (fun (.getContent obj))))
+(defmethod swap-content! javafx.scene.control.Tab [obj fun]
+  (.setContent obj (fun (.getContent obj))))
