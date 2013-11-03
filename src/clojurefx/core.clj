@@ -8,12 +8,10 @@
 
 ;; ## Threading helpers
 
-(def exception (atom nil))
 (defn run-later*"
 Simple wrapper for Platform/runLater. You should use run-later.
 " [f]
-(javafx.application.Platform/runLater (try f
-                                           (catch IllegalArgumentException e (reset! exception e)))))
+(javafx.application.Platform/runLater f))
 
 (defmacro run-later [& body]
   `(run-later* (fn [] ~@body)))
@@ -35,7 +33,7 @@ Runs the code on the FX application thread and waits until the return value is d
 
 ;; TODO this is an idiotic place for this function.
 (defn- prepend-and-camel [prep s]
-  (symbol (str (name prep) (str/upper-case (subs (name s) 0 1)) (subs (name s) 1))))
+  (str (name prep) (str/upper-case (subs (name s) 0 1)) (subs (name s) 1)))
 
 ;; ## Collection helpers
 ;; This probably isn't the ideal approach for mutable collections. Check back for better ones.
@@ -76,19 +74,26 @@ Runs the code on the FX application thread and waits until the return value is d
 ;; ### Properties
 ;; #### Binding
 
-(defn bind-property "Binds a property to an atom.
+(defn bind-property! "Binds a property to an atom.
 Other STM objects might be supported in the future.
 Whenever the content of the atom changes, this change is propagated to the property.
 " [obj prop at]
-  (let [listeners (atom [])
-        observable (proxy [javafx.beans.value.ObservableValue] []
-                     (addListener [l] (swap! listeners conj l))
-                     (removeListener [l] (swap! listeners #(remove #{l} %)))
-                     (getValue [] @at))]
-    (add-watch at (keyword (str (name obj) (name prop)))
-               (fn [_ r oldS newS]
-                 (doseq [listener listeners]
-                   (.changed listener observable oldS newS))))))
+(let [listeners (atom [])
+      inv-listeners (atom [])
+      property (run-now (clojure.lang.Reflector/invokeInstanceMethod obj (str (name prop) "Property") (to-array [])))
+      observable (reify javafx.beans.value.ObservableValue
+                   (^void addListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners conj l))
+                   (^void addListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners conj l))
+                   (^void removeListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners #(remove #{l} %)))
+                   (^void removeListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners #(remove #{l} %)))
+                   (getValue [this] @at))]
+  (add-watch at (keyword (name prop))
+             (fn [_ r oldS newS]
+               (run-now (doseq [listener @inv-listeners]
+                          (.invalidated listener observable)))
+               (run-now (doseq [listener @listeners]
+                          (.changed listener observable oldS newS)))))
+  (run-now (.bind property observable))))
 
 ;; ### Events
 ;; #### Preprocessing
@@ -159,13 +164,17 @@ Whenever the content of the atom changes, this change is propagated to the prope
                   :shift-down? (.isShiftDown e)))
 
 ;; #### API
+(defn set-listener!* [obj event fun]
+(run-now
+ (clojure.lang.Reflector/invokeInstanceMethod obj (prepend-and-camel "set" (name event))
+                                              (to-array [(reify javafx.event.EventHandler
+                                                           (handle [this t]
+                                                             (fun (preprocess-event t))))]))))
 
-(defn add-listener "Adds a listener to a node event.
+(defmacro set-listener! "Adds a listener to a node event.
 The listener gets a preprocessed event map as shown above.
-" [obj event fun]
-(. obj (prepend-and-camel "set" (name event))
-   (proxy [javafx.event.EventHandler] []
-     (handle [t] (-> t preprocess-event fun)))))
+" [obj event args & body]
+  `(set-listener!* ~obj ~event (fn ~args ~@body)))
 
 ;; ## Builder parsing
 
@@ -227,7 +236,11 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
                                    (symbol (str k "." (camel (name builder))))))))))
 
 (defn method-fetcher "Fetches all public methods of a class." [class]
-  (filter #(contains? (:flags %) :public) (filter :return-type (:members (reflect class)))))
+  (let [cl (reflect class)
+        current-methods (filter #(contains? (:flags %) :public) (filter :return-type (:members cl)))]
+    (if (nil? cl)
+      current-methods
+      (reduce #(flatten (conj %1 (method-fetcher (resolve %2)))) current-methods (:bases cl)))))
 
 (defn- uncamelcaseize [sym]
   (let [s (-> sym str seq)]
@@ -241,7 +254,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
                  (cons (first s) out)))))))
 
 (def get-method-calls (memoize (fn [ctrl]
-                                 (let [full (get-qualified ctrl)
+                                 (let [full (resolve (get-qualified ctrl))
                                        fns (eval `(method-fetcher ~full))
                                        calls (atom {})]
                                    (doseq [fun fns
@@ -270,7 +283,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
         listeners# listen
         qualified-name# (get-qualified ctrl)
         methods# (get-method-calls ctrl)
-        args# (eval (dissoc args :bind :listen))
+        args# (dissoc args :bind :listen)
         obj# (construct-node qualified-name# args#)
         proc-args# (into {} (for [key# (keys args#)]
                               (wrap-arg [key# (key# args#)] qualified-name#)))]
@@ -278,9 +291,9 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
                (if (contains? methods# (key arg#))
                  (((key arg#) methods#) obj# (val arg#))))
              (doseq [prop# props#]
-               (bind-property obj# (key prop#) (val prop#)))
+               (bind-property! obj# (key prop#) (val prop#)))
              (doseq [listener# listeners#]
-               (add-listener obj# (key listener#) (val listener#)))
+               (apply set-listener!* obj# (flatten [(key listener#) (val listener#)])))
              obj#)))
 
 (defmacro fx "
@@ -301,7 +314,7 @@ named arguments for the constructor arguments and object setters.
 (defmacro def-simple-swapper [clazz getter setter]
   `(defmethod swap-content! ~clazz [obj# fun#]
      (let [bunch# (~getter obj#)]
-       (~setter bunch# (fun# (into [] bunch#))))))
+       (run-now (~setter bunch# (fun# (into [] bunch#)))))))
 
 (def-simple-swapper javafx.scene.layout.Pane .getChildren .setAll)
 (def-simple-swapper javafx.scene.control.Accordion .getPanes .setAll)
@@ -345,3 +358,15 @@ named arguments for the constructor arguments and object setters.
   (.setContent obj (fun (.getContent obj))))
 (defmethod swap-content! javafx.scene.control.Tab [obj fun]
   (.setContent obj (fun (.getContent obj))))
+
+;; ## TEST
+;; (def title (atom "Hi."))
+;; (deffx rt v-box :children [])
+;; (deffx scn scene :width 800 :height 600 :root rt)
+;; (deffx stg stage :title "Hello ClojureFX!" :scene scn)
+;; (run-now (.show stg))
+
+;; (deffx hidebtn button :text "Hide this window")
+;; (set-listener! hidebtn :onAction [_] (run-now (.hide stg)))
+;; (swap-content! rt #(conj % hidebtn))
+;; (bind-property! stg :title title)
