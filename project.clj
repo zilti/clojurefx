@@ -1,7 +1,9 @@
 (defproject clojurefx "0.0.7-SNAPSHOT"
   :description "Helper functions and probably a wrapper to simplify usage of JavaFX in Clojure.
 
-You'll need to have jfxrt.jar in your local maven repository. See [this coderwall protip](https://coderwall.com/p/4yjy1a) for how to make this happen.
+  This is meant to be used with Java 8. If you add JavaFX 2.2 to your classpath it might still work, but that isn't tested.
+  
+  [This Project On GitHub](https://www.github.com/zilti/clojurefx)
 
 **Installation: `[clojurefx \"0.0.6\"]`**"
   :url "https://www.github.com/zilti/clojurefx"
