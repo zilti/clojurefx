@@ -274,9 +274,8 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
 (defmethod construct-node 'javafx.scene.Scene [clazz args]
   (constructor-helper clazz (:root args) (:width args) (:height args) (:depth-buffer args)))
 
-(defmulti wrap-arg (fn [arg class] arg))
-(defmethod wrap-arg :default [arg class]
-  arg)
+(defmulti wrap-arg "Autoboxing-like behaviour for arguments for ClojureFX nodes." (fn [arg class] arg))
+(defmethod wrap-arg :default [arg class] arg)
 
 (defn fx* [ctrl & {:keys [bind listen] :as args}]
   (let [props# bind
