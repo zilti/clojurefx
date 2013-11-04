@@ -2,7 +2,9 @@
   (:require [clojure.string :as str]
             [clojure.data :as cljdata]
             [clojure.walk :refer :all]
-            [clojure.reflect :refer :all]))
+            [clojure.reflect :refer :all]
+            clojurefx.events
+            clojurefx.binding))
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
@@ -46,9 +48,32 @@ Runs the code on the FX application thread and waits until the return value is d
 (defn set->observable [s]
   (javafx.collections.FXCollections/unmodifiableObservableSet s))
 
-;; ## Encapsulation and preprocessing
-;; ### KeyCode
+;; ## Data binding
+(defmulti bidirectional-bind-property! (fn [type obj prop & args] type))
 
+(defmulti bind-property! "Binds a property to an atom.
+Other STM objects might be supported in the future.
+Whenever the content of the atom changes, this change is propagated to the property.
+" (fn [obj prop target] (type target)))
+
+(defmethod bind-property! clojure.lang.Atom [obj prop at]
+  (let [listeners (atom [])
+        inv-listeners (atom [])
+        property (run-now (clojure.lang.Reflector/invokeInstanceMethod obj (str (name prop) "Property") (to-array [])))
+        observable (reify javafx.beans.value.ObservableValue
+                     (^void addListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners conj l))
+                     (^void addListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners conj l))
+                     (^void removeListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners #(remove #{l} %)))
+                     (^void removeListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners #(remove #{l} %)))
+                     (getValue [this] @at))]
+    (add-watch at (keyword (name prop))
+               (fn [_ r oldS newS]
+                 (run-now (doseq [listener @inv-listeners] (.invalidated listener observable))
+                          (doseq [listener @listeners] (.changed listener observable oldS newS)))))
+    (run-now (.bind property observable))
+    (run-now (doseq [listener @inv-listeners] (.invalidated listener observable)))))
+
+;; ## Events
 (defn- prep-key-code [k]
   {:keycode k
    :name (-> (.getName k) str/lower-case keyword)
@@ -70,35 +95,6 @@ Runs the code on the FX application thread and waits until the return value is d
    :point (.getIntersectedPoint p)
    :tex-coord (.getIntersectedTexCoord p)})
 
-;; ## Event handling
-;; ### Properties
-;; #### Binding
-
-(defn bidirectional-bind-property! [] nil)
-
-(defn bind-property! "Binds a property to an atom.
-Other STM objects might be supported in the future.
-Whenever the content of the atom changes, this change is propagated to the property.
-" [obj prop at]
-(let [listeners (atom [])
-      inv-listeners (atom [])
-      property (run-now (clojure.lang.Reflector/invokeInstanceMethod obj (str (name prop) "Property") (to-array [])))
-      observable (reify javafx.beans.value.ObservableValue
-                   (^void addListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners conj l))
-                   (^void addListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners conj l))
-                   (^void removeListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners #(remove #{l} %)))
-                   (^void removeListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners #(remove #{l} %)))
-                   (getValue [this] @at))]
-  (add-watch at (keyword (name prop))
-             (fn [_ r oldS newS]
-               (run-now (doseq [listener @inv-listeners]
-                          (.invalidated listener observable)))
-               (run-now (doseq [listener @listeners]
-                          (.changed listener observable oldS newS)))))
-  (run-now (.bind property observable))))
-
-;; ### Events
-;; #### Preprocessing
 
 (defn- prep-event-map [e & {:as m}]
   (let [prep {:event e
@@ -167,16 +163,16 @@ Whenever the content of the atom changes, this change is propagated to the prope
 
 ;; #### API
 (defn set-listener!* [obj event fun]
-(run-now
- (clojure.lang.Reflector/invokeInstanceMethod obj (prepend-and-camel "set" (name event))
-                                              (to-array [(reify javafx.event.EventHandler
-                                                           (handle [this t]
-                                                             (fun (preprocess-event t))))]))))
+  (run-now
+   (clojure.lang.Reflector/invokeInstanceMethod obj (prepend-and-camel "set" (name event))
+                                                (to-array [(reify javafx.event.EventHandler
+                                                             (handle [this t]
+                                                               (fun (preprocess-event t))))]))))
 
 (defmacro set-listener! "Adds a listener to a node event.
 The listener gets a preprocessed event map as shown above.
 " [obj event args & body]
-  `(set-listener!* ~obj ~event (fn ~args ~@body)))
+`(set-listener!* ~obj ~event (fn ~args ~@body)))
 
 ;; ## Builder parsing
 
@@ -231,11 +227,11 @@ The listener gets a preprocessed event map as shown above.
 (defn- get-qualified "
 An exhaustive list of every visual JavaFX component. To add entries, modify the pkgs atom.<br/>
 Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
-" [builder]
-(let [builder (symbol builder)]
-  (first (filter (comp not nil?) (for [k (keys @pkgs)]
-                                 (if (not (empty? (filter #(= % builder) (get @pkgs k))))
-                                   (symbol (str k "." (camel (name builder))))))))))
+" (memoize (fn [builder]
+             (let [builder (symbol builder)]
+               (first (filter (comp not nil?) (for [k (keys @pkgs)]
+                                              (if (not (empty? (filter #(= % builder) (get @pkgs k))))
+                                                (symbol (str k "." (camel (name builder))))))))))))
 
 (defn method-fetcher "Fetches all public methods of a class." [class]
   (let [cl (reflect class)
