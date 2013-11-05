@@ -11,4 +11,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]]
-  :plugins [[lein-marginalia "0.7.1"]])
+  :plugins [[lein-marginalia "0.7.1"]
+            [lein-midje "3.1.3-RC2"]
+            [lein-release "1.0.5"]]
+  :profiles {:dev {:dependencies [[midje "1.6-beta1"]]}})

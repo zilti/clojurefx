@@ -2,9 +2,7 @@
   (:require [clojure.string :as str]
             [clojure.data :as cljdata]
             [clojure.walk :refer :all]
-            [clojure.reflect :refer :all]
-            clojurefx.events
-            clojurefx.binding))
+            [clojure.reflect :refer :all]))
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
@@ -33,9 +31,20 @@ Runs the code on the FX application thread and waits until the return value is d
 " [& body]
   `(run-now* (fn [] ~@body)))
 
+(defn camel [in]
+  (let [in (name in)
+        in (str/split in #"-")
+        in (map #(if (= (str (first %)) (str/upper-case (first %)))
+                   % (str/capitalize %)) in)
+        in (into [] in)]
+    (apply str in)))
+
 ;; TODO this is an idiotic place for this function.
-(defn- prepend-and-camel [prep s]
-  (str (name prep) (str/upper-case (subs (name s) 0 1)) (subs (name s) 1)))
+(defn prepend-and-camel [prep s]
+  (camel (str prep "-" s))
+  (let [c (camel (str prep "-" s))]
+    (str (str/lower-case (subs c 0 1)) (subs c 1)))
+  )
 
 ;; ## Collection helpers
 ;; This probably isn't the ideal approach for mutable collections. Check back for better ones.
@@ -71,7 +80,8 @@ Whenever the content of the atom changes, this change is propagated to the prope
                  (run-now (doseq [listener @inv-listeners] (.invalidated listener observable))
                           (doseq [listener @listeners] (.changed listener observable oldS newS)))))
     (run-now (.bind property observable))
-    (run-now (doseq [listener @inv-listeners] (.invalidated listener observable)))))
+    (run-now (doseq [listener @inv-listeners] (.invalidated listener observable)))
+    obj))
 
 ;; ## Events
 (defn- prep-key-code [k]
@@ -176,13 +186,6 @@ The listener gets a preprocessed event map as shown above.
 
 ;; ## Builder parsing
 
-(defn- camel [in]
-  (let [in (name in)
-        in (str/split in #"-")
-        in (map #(if (= (str (first %)) (str/upper-case (first %)))
-                   % (str/capitalize %)) in)
-        in (into [] in)]
-    (apply str in)))
 
 (def pkgs (atom {"javafx.scene.control" '[accordion button cell check-box check-box-tree-item check-menu-item choice-box
                                           color-picker combo-box context-menu custom-menu-item date-picker date-cell hyperlink
@@ -226,7 +229,7 @@ The listener gets a preprocessed event map as shown above.
                  "javafx.geometry" '[bounding-box dimension-2D insets point-2D point-3D rectangle-2D]
                  "javafx.embed.swing" '[JFX-panel-builder]}))
 
-(defn- get-qualified "
+(def get-qualified "
 An exhaustive list of every visual JavaFX component. To add entries, modify the pkgs atom.<br/>
 Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
 " (memoize (fn [builder]
