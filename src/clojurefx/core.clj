@@ -41,10 +41,8 @@ Runs the code on the FX application thread and waits until the return value is d
 
 ;; TODO this is an idiotic place for this function.
 (defn prepend-and-camel [prep s]
-  (camel (str prep "-" s))
   (let [c (camel (str prep "-" s))]
-    (str (str/lower-case (subs c 0 1)) (subs c 1)))
-  )
+    (str (str/lower-case (subs c 0 1)) (subs c 1))))
 
 ;; ## Collection helpers
 ;; This probably isn't the ideal approach for mutable collections. Check back for better ones.
