@@ -32,4 +32,9 @@
          (fact "String binding at object creation time"
                (-> (fx button :text "Old text" :bind {:text propbind}) .getText) => "New text")))
 
-
+(def fireatom (atom nil))
+(deffx actionbtn button :listen {:onAction [[x] (reset! fireatom "InlineFired")]})
+(facts "Action binding"
+       (with-state-changes [(before :facts (.fire actionbtn))]
+         (fact "Inline fx* action binding"
+               @fireatom => "InlineFired")))

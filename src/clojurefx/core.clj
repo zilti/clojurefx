@@ -182,129 +182,6 @@ The listener gets a preprocessed event map as shown above.
 " [obj event args & body]
 `(set-listener!* ~obj ~event (fn ~args ~@body)))
 
-;; ## Builder parsing
-
-
-(def pkgs (atom {"javafx.scene.control" '[accordion button cell check-box check-box-tree-item check-menu-item choice-box
-                                          color-picker combo-box context-menu custom-menu-item date-picker date-cell hyperlink
-                                          indexed-cell index-range label list-cell list-view menu-bar menu menu-button menu-item
-                                          pagination password-field popup-control progress-bar progress-indicator
-                                          radio-button radio-menu-item scroll-bar scroll-pane separator
-                                          separator-menu-item slider split-menu-button split-pane tab table-cell table-column
-                                          table-position table-row table-view tab-pane text-area text-field tree-cell
-                                          titled-pane toggle-button toggle-group tool-bar tooltip tree-item tree-view
-                                          tree-table-cell tree-table-column tree-table-row tree-table-view]
-                 "javafx.scene.control.cell" '[check-box-list-cell check-box-table-cell check-box-tree-cell
-                                               choice-box-list-cell choice-box-table-cell choice-box-tree-cell
-                                               combo-box-list-cell combo-box-table-cell combo-box-tree-cell
-                                               text-field-list-cell text-field-table-cell text-field-tree-cell
-                                               property-value-factory]
-                 "javafx.scene.layout" '[anchor-pane border-pane column-constraints flow-pane grid-pane h-box pane region
-                                         row-constraints stack-pane tile-pane v-box]
-                 "javafx.scene.text" '[text font text-flow]
-                 "javafx.scene.shape" '[arc arc-to circle close-path cubic-curve cubic-curve-to ellipse
-                                        h-line-to line line-to move-to path polygon polyline quad-curve quad-curve-to
-                                        rectangle SVG-path box cylinder mesh-view sphere]
-                 "javafx.scene.canvas" '[canvas]
-                 "javafx.scene.image" '[image-view]
-                 "javafx.scene.input" '[clipboard-content key-character-combination key-code-combination mnemonic]
-                 "javafx.scene.effect" '[blend bloom box-blur color-adjust color-input displacement-map drop-shadow float-map
-                                         gaussian-blur glow image-input inner-shadow lighting motion-blur perspective-transform
-                                         reflection sepia-tone shadow]
-                 "javafx.scene.paint" '[color image-pattern linear-gradient radial-gradient stop]
-                 "javafx.scene.chart" '[chart area-chart bar-chart line-chart bubble-chart pie-chart scatter-chart
-                                        stacked-area-chart stacked-bar-chart x-y-chart
-                                        axis category-axis number-axis value-axis]
-                 "javafx.scene.media" '[audio-clip media media-player media-view]
-                 "javafx.scene.transform" '[affine rotate scale shear translate]
-                 "javafx.scene.web" '[HTML-editor prompt-data web-engine web-view]
-                 "javafx.scene" '[scene group image-cursor perspective-camera snapshot-parameters
-                                  ambient-light parallel-camera perspective-camera point-light]
-                 "javafx.animation" '[fade-transition fill-transition parallel-transition path-transition pause-transition
-                                      rotate-transition scale-transition sequential-transition stroke-transition timeline
-                                      translate-transition]
-                 "javafx.stage" '[stage directory-chooser file-chooser popup]
-                 "javafx.geometry" '[bounding-box dimension-2D insets point-2D point-3D rectangle-2D]
-                 "javafx.embed.swing" '[JFX-panel-builder]}))
-
-(def get-qualified "
-An exhaustive list of every visual JavaFX component. To add entries, modify the pkgs atom.<br/>
-Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
-" (memoize (fn [builder]
-             (let [builder (symbol builder)]
-               (first (filter (comp not nil?) (for [k (keys @pkgs)]
-                                              (if (not (empty? (filter #(= % builder) (get @pkgs k))))
-                                                (symbol (str k "." (camel (name builder))))))))))))
-
-(defn method-fetcher "Fetches all public methods of a class." [class]
-  (let [cl (reflect class)
-        current-methods (filter #(contains? (:flags %) :public) (filter :return-type (:members cl)))]
-    (if (nil? cl)
-      current-methods
-      (reduce #(flatten (conj %1 (method-fetcher (resolve %2)))) current-methods (:bases cl)))))
-
-(defn- uncamelcaseize [sym]
-  (let [s (-> sym str seq)]
-    (loop [s s
-           out (list)]
-      (if (empty? s)
-        (subs (->> out reverse (apply str)) 1)
-        (recur (rest s)
-               (if (Character/isUpperCase (first s))
-                 (->> out (cons \-) (cons (Character/toLowerCase (first s))))
-                 (cons (first s) out)))))))
-
-(def get-method-calls (memoize (fn [ctrl]
-                                 (let [full (resolve (get-qualified ctrl))
-                                       fns (eval `(method-fetcher ~full))
-                                       calls (atom {})]
-                                   (doseq [fun fns
-                                           :when (= "set" (subs (str (:name fun)) 0 3))]
-                                     (swap! calls assoc
-                                            (keyword (uncamelcaseize (subs (name (:name fun)) 3)))
-                                            (eval `(fn [obj# arg#] (. obj# ~(:name fun) arg#)))))
-                                   @calls))))
-
-(defmulti construct-node (fn [class args] class))
-(defmethod construct-node :default [class _]
-  (run-now (eval `(new ~class))))
-
-(defn constructor-helper [clazz & args]
-  (run-now (clojure.lang.Reflector/invokeConstructor (resolve clazz) (to-array (remove nil? args)))))
-
-(defmethod construct-node 'javafx.scene.Scene [clazz args]
-  (constructor-helper clazz (:root args) (:width args) (:height args) (:depth-buffer args)))
-
-(defmulti wrap-arg "Autoboxing-like behaviour for arguments for ClojureFX nodes." (fn [arg class] arg))
-(defmethod wrap-arg :default [arg class] arg)
-
-(defn fx* [ctrl & {:keys [bind listen] :as args}]
-  (let [props# bind
-        listeners# listen
-        qualified-name# (get-qualified ctrl)
-        methods# (get-method-calls ctrl)
-        args# (dissoc args :bind :listen)
-        obj# (construct-node qualified-name# args#)
-        proc-args# (into {} (for [key# (keys args#)]
-                              (wrap-arg [key# (key# args#)] qualified-name#)))]
-    (run-now (doseq [arg# proc-args#]
-               (if (contains? methods# (key arg#))
-                 (((key arg#) methods#) obj# (val arg#))))
-             (doseq [prop# props#]
-               (bind-property! obj# (key prop#) (val prop#)))
-             (doseq [listener# listeners#]
-               (apply set-listener!* obj# (flatten [(key listener#) (val listener#)])))
-             obj#)))
-
-(defmacro fx "
-The central macro of ClojureFX. This takes the name of a node as declared in the pkgs atom and
-named arguments for the constructor arguments and object setters.
-" [ctrl & args]
-  `(fx* '~ctrl ~@args))
-
-(defmacro deffx [name ctrl & props]
-  `(def ~name (fx ~ctrl ~@props)))
-
 ;; ## Content modification
 ;; ### Easy modification of child elements.
 ;; Usage: `(swap-content! <object> <modification-function>)`.
@@ -358,6 +235,153 @@ named arguments for the constructor arguments and object setters.
   (.setContent obj (fun (.getContent obj))))
 (defmethod swap-content! javafx.scene.control.Tab [obj fun]
   (.setContent obj (fun (.getContent obj))))
+
+;; ## Builder parsing
+(def pkgs (atom {"javafx.scene.control" '[accordion button cell check-box check-box-tree-item check-menu-item choice-box
+                                          color-picker combo-box context-menu custom-menu-item date-picker date-cell hyperlink
+                                          indexed-cell index-range label list-cell list-view menu-bar menu menu-button menu-item
+                                          pagination password-field popup-control progress-bar progress-indicator
+                                          radio-button radio-menu-item scroll-bar scroll-pane separator
+                                          separator-menu-item slider split-menu-button split-pane tab table-cell table-column
+                                          table-position table-row table-view tab-pane text-area text-field tree-cell
+                                          titled-pane toggle-button toggle-group tool-bar tooltip tree-item tree-view
+                                          tree-table-cell tree-table-column tree-table-row tree-table-view]
+                 "javafx.scene.control.cell" '[check-box-list-cell check-box-table-cell check-box-tree-cell
+                                               choice-box-list-cell choice-box-table-cell choice-box-tree-cell
+                                               combo-box-list-cell combo-box-table-cell combo-box-tree-cell
+                                               text-field-list-cell text-field-table-cell text-field-tree-cell
+                                               property-value-factory]
+                 "javafx.scene.layout" '[anchor-pane border-pane column-constraints flow-pane grid-pane h-box pane region
+                                         row-constraints stack-pane tile-pane v-box]
+                 "javafx.scene.text" '[text font text-flow]
+                 "javafx.scene.shape" '[arc arc-to circle close-path cubic-curve cubic-curve-to ellipse
+                                        h-line-to line line-to move-to path polygon polyline quad-curve quad-curve-to
+                                        rectangle SVG-path box cylinder mesh-view sphere]
+                 "javafx.scene.canvas" '[canvas]
+                 "javafx.scene.image" '[image-view]
+                 "javafx.scene.input" '[clipboard-content key-character-combination key-code-combination mnemonic]
+                 "javafx.scene.effect" '[blend bloom box-blur color-adjust color-input displacement-map drop-shadow float-map
+                                         gaussian-blur glow image-input inner-shadow lighting motion-blur perspective-transform
+                                         reflection sepia-tone shadow]
+                 "javafx.scene.paint" '[color image-pattern linear-gradient radial-gradient stop]
+                 "javafx.scene.chart" '[chart area-chart bar-chart line-chart bubble-chart pie-chart scatter-chart
+                                        stacked-area-chart stacked-bar-chart x-y-chart
+                                        axis category-axis number-axis value-axis]
+                 "javafx.scene.media" '[audio-clip media media-player media-view]
+                 "javafx.scene.transform" '[affine rotate scale shear translate]
+                 "javafx.scene.web" '[HTML-editor prompt-data web-engine web-view]
+                 "javafx.scene" '[scene group image-cursor perspective-camera snapshot-parameters
+                                  ambient-light parallel-camera perspective-camera point-light]
+                 "javafx.animation" '[fade-transition fill-transition parallel-transition path-transition pause-transition
+                                      rotate-transition scale-transition sequential-transition stroke-transition timeline
+                                      translate-transition]
+                 "javafx.stage" '[stage directory-chooser file-chooser popup]
+                 "javafx.geometry" '[bounding-box dimension-2D insets point-2D point-3D rectangle-2D]
+                 "javafx.embed.swing" '[JFX-panel]}))
+
+(def get-qualified "
+An exhaustive list of every visual JavaFX component. To add entries, modify the pkgs atom.<br/>
+Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
+" (memoize (fn [builder]
+             (let [builder (symbol builder)]
+               (first (filter (comp not nil?) (for [k (keys @pkgs)]
+                                              (if (not (empty? (filter #(= % builder) (get @pkgs k))))
+                                                (symbol (str k "." (camel (name builder))))))))))))
+
+(defn method-fetcher "Fetches all public methods of a class." [class]
+  (let [cl (reflect class)
+        current-methods (filter #(contains? (:flags %) :public) (filter :return-type (:members cl)))]
+    (if (nil? cl)
+      current-methods
+      (reduce #(flatten (conj %1 (method-fetcher (resolve %2)))) current-methods (:bases cl)))))
+
+(defn- uncamelcaseize [sym]
+  (let [s (-> sym str seq)]
+    (loop [s s
+           out (list)]
+      (if (empty? s)
+        (subs (->> out reverse (apply str)) 1)
+        (recur (rest s)
+               (if (Character/isUpperCase (first s))
+                 (->> out (cons \-) (cons (Character/toLowerCase (first s))))
+                 (cons (first s) out)))))))
+
+(def get-method-calls (memoize (fn [ctrl]
+                                 (let [full (resolve (get-qualified ctrl))
+                                       fns (eval `(method-fetcher ~full))
+                                       calls (atom {})]
+                                   (doseq [fun fns
+                                           :when (= "set" (subs (str (:name fun)) 0 3))]
+                                     (swap! calls assoc
+                                            (keyword (uncamelcaseize (subs (name (:name fun)) 3)))
+                                            (eval `(fn [obj# arg#] (. obj# ~(:name fun) arg#)))))
+                                   @calls))))
+
+;; Constructor tools
+(defn constructor-helper [clazz & args]
+  (run-now (clojure.lang.Reflector/invokeConstructor (resolve clazz) (to-array (remove nil? args)))))
+(defmacro construct [clazz keys]
+  `(defmethod construct-node '~clazz [cl# ar#]
+     (apply constructor-helper cl# (for [k# ~keys] (get ar# k#)))))
+
+(defmulti construct-node (fn [class args] class))
+(defmethod construct-node :default [class _]
+  (run-now (eval `(new ~class))))
+
+(construct 'javafx.scene.Scene [:root :width :height :depth-buffer :scene-antialiasing])
+(construct 'javafx.stage.Stage [:stage-style])
+(construct 'javafx.scene.control.ColorPicker [:color])
+
+;; Argument wrapping
+(defmulti wrap-arg "Autoboxing-like behaviour for arguments for ClojureFX nodes." (fn [arg class] arg))
+
+(defmethod wrap-arg :default [arg class] arg)
+
+(defmethod wrap-arg :scene-antialiasing [arg class]
+  (clojure.lang.Reflector/getStaticField javafx.scene.SceneAntialiasing (-> arg name str/upper-case)))
+
+(defmethod wrap-arg :stage-style [arg class]
+  (clojure.lang.Reflector/getStaticField javafx.stage.StageStyle (-> arg name str/upper-case)))
+
+(defmethod wrap-arg :accelerator [arg _]
+  (if (string? arg)
+    (javafx.scene.input.KeyCombination/keyCombination arg)
+    arg))
+
+;; Builder API
+(defn fx* [ctrl & args]
+  (let [args# (if-not (and (nil? args) (map? args)) (apply hash-map args) args)
+        {:keys [bind listen content children]} args#
+        props# bind
+        listeners# listen
+        content# (merge content children)
+        qualified-name# (get-qualified ctrl)
+        methods# (get-method-calls ctrl)
+        args# (dissoc args# :bind :listen)
+        obj# (construct-node qualified-name# args#)
+        proc-args# (into {} (for [key# (keys args#)]
+                              (wrap-arg [key# (key# args#)] qualified-name#)))
+        proc-props# (into {} (for [key# (keys props#)]
+                               [key# (resolve (key# props#))]))]
+    (run-now (doseq [arg# proc-args#] ;; Apply arguments
+               (if (contains? methods# (key arg#))
+                 (((key arg#) methods#) obj# (val arg#))))
+             (doseq [prop# proc-props#] ;; Bind properties
+               (bind-property! obj# (key prop#) @(val prop#)))
+             (doseq [listener# listeners#] ;; Add listeners
+               (apply set-listener!* obj# (flatten [(key listener#) (val listener#)])))
+             (doseq [entry content#] ;; Set swappables
+               (apply swap-content! obj# (fn [_] entry)))
+             obj#)))
+
+(defmacro fx "
+The central macro of ClojureFX. This takes the name of a node as declared in the pkgs atom and
+named arguments for the constructor arguments and object setters.
+" [ctrl & args]
+`(fx* '~ctrl ~@(for [arg args] `(quote ~arg))))
+
+(defmacro deffx [name ctrl & props]
+  `(def ~name (fx ~ctrl ~@props)))
 
 ;; ## TEST
 ;; (def title (atom "Hi."))
