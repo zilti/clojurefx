@@ -35,7 +35,7 @@ Runs the code on the FX application thread and waits until the return value is d
   (let [in (name in)
         in (str/split in #"-")
         in (map #(if (= (str (first %)) (str/upper-case (first %)))
-                   % (str/capitalize %)) in)
+                   % (str (str/upper-case (subs % 0 1)) (subs % 1))) in)
         in (into [] in)]
     (apply str in)))
 
