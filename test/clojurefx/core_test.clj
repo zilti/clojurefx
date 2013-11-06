@@ -42,8 +42,17 @@
                (-> (fx grid-pane :bind {:grid-lines-visible propbind}) .isGridLinesVisible) => true)))
 
 (def fireatom (atom nil))
-(deffx actionbtn button :listen {:onAction [[x] (reset! fireatom "InlineFired")]})
-(future-facts "Action binding"
-       (with-state-changes [(before :facts (.fire actionbtn))]
+(facts "Action binding"
+       (with-state-changes [(before :facts (let [actionbtn (fx button)]
+                                             (set-listener! actionbtn :on-action [x] (reset! fireatom "Fired"))
+                                             (.fire actionbtn)))]
+         (fact "Action binding"
+               @fireatom => "Fired"))
+       (with-state-changes [(before :facts (let [actionbtn-inline (fx button :listen {:on-action (fn [x] (reset! fireatom "InlineFired"))})]
+                                             (.fire actionbtn-inline)))]
          (fact "Inline fx* action binding"
                @fireatom => "InlineFired")))
+
+(facts "Child elements"
+       (fact "Simple child elements"
+             (-> (fx v-box :children [(fx button)]) .getChildren first type) => javafx.scene.control.Button))

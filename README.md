@@ -28,10 +28,12 @@ as defn, except that it binds the new JavaFX object to a symbol instead of a fun
   (fx stage :title "Hello ClojureFX!" :bind {:title title-atom})
   ```
 
-* You can do the same for action listeners, just use the :listen key instead: (Syntax can and *will* change!)
+* You can do the same for action listeners, just use the :listen key instead:
   ```clojure
-  (fx button :text "Hide the window" :listen {:onAction [[_] (run-now (.hide stg))]})
+  (fx button :text "Hide the window" :listen {:onAction (fn [_] (run-now (.hide stg)))})
   ```
+
+* And you can do it for child elements. Use the key `content` or `children` (equivalent). The value of this key must be a datastructure a function given to `swap-content!` would return. (Does not work yet)
 
 ### Modifying
 #### Child elements

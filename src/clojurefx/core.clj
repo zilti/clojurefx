@@ -353,7 +353,18 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
     arg))
 
 ;; Builder API
-(def dbg (atom nil))
+(defn- symbolwalker [q]
+  (if (symbol? q)
+    (if-let [x (resolve q)]
+      x
+      q)
+    q))
+
+(defn- varwalker [q]
+  (if (var? q)
+    (deref q)
+    q))
+
 (defn fx* [ctrl & args]
   (let [args# (if-not (and (nil? args) (map? args)) (apply hash-map args) args)
         {:keys [bind listen content children]} args#
@@ -363,20 +374,16 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
         qualified-name# (get-qualified ctrl)
         methods# (get-method-calls ctrl)
         args# (dissoc args# :bind :listen)
-        proc-args# (into {} (for [key# (keys args#)]
-                              (wrap-arg [key# (eval (key# args#))] qualified-name#)))
-        proc-props# (into {} (for [key# (keys props#)]
-                               [key# (resolve (key# props#))]))
-        obj# (construct-node qualified-name# proc-args#)]
-    (run-now (doseq [arg# proc-args#] ;; Apply arguments
+        obj# (construct-node qualified-name# args#)]
+    (println content#)
+    (run-now (doseq [arg# args#] ;; Apply arguments
                (if (contains? methods# (key arg#))
                  (((key arg#) methods#) obj# (val arg#))))
-             (doseq [prop# proc-props#] ;; Bind properties
-               (bind-property! obj# (key prop#) @(val prop#)))
+             (doseq [prop# props#] ;; Bind properties
+               (bind-property! obj# (key prop#) (val prop#)))
              (doseq [listener# listeners#] ;; Add listeners
-               (apply set-listener!* obj# (flatten [(key listener#) (val listener#)])))
+               (set-listener!* obj# (key listener#) (val listener#)))
              (doseq [entry content#] ;; Set swappables
-               (println entry)
                (apply swap-content! obj# (fn [_] entry)))
              obj#)))
 
@@ -389,7 +396,8 @@ Special keys:
  * `listen` (TBD)
  * `content` or `children` (equivalent) must be a datastructure a function given to `swap-content!` would return.
 " [ctrl & args]
-`(fx* '~ctrl ~@(for [arg args] `(quote ~arg))))
+`(fx* '~ctrl ~@args;;(for [arg args] `(quote ~arg))
+      ))
 
 (defmacro deffx [name ctrl & props]
   `(def ~name (fx ~ctrl ~@props)))
