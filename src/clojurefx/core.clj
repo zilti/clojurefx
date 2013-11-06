@@ -31,13 +31,15 @@ Runs the code on the FX application thread and waits until the return value is d
 " [& body]
   `(run-now* (fn [] ~@body)))
 
-(defn camel [in]
+(defn camel [in & [method?]]
   (let [in (name in)
         in (str/split in #"-")
         in (map #(if (= (str (first %)) (str/upper-case (first %)))
                    % (str (str/upper-case (subs % 0 1)) (subs % 1))) in)
-        in (into [] in)]
-    (apply str in)))
+        in (apply str (into [] in))]
+    (if method?
+      (str (str/lower-case (subs in 0 1)) (subs in 1))
+      in)))
 
 ;; TODO this is an idiotic place for this function.
 (defn prepend-and-camel [prep s]
@@ -66,7 +68,8 @@ Whenever the content of the atom changes, this change is propagated to the prope
 (defmethod bind-property! clojure.lang.Atom [obj prop at]
   (let [listeners (atom [])
         inv-listeners (atom [])
-        property (run-now (clojure.lang.Reflector/invokeInstanceMethod obj (str (name prop) "Property") (to-array [])))
+        prop (str (camel prop true) "Property")
+        property (run-now (clojure.lang.Reflector/invokeInstanceMethod obj prop (to-array [])))
         observable (reify javafx.beans.value.ObservableValue
                      (^void addListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners conj l))
                      (^void addListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners conj l))
