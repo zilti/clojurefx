@@ -20,6 +20,10 @@
 (fact "Setter generation"
       (.getText (fx button :text "ClojureFX")) => "ClojureFX")
 
+(fact "Constructor detection"
+      (type (fx color-picker :color javafx.scene.paint.Color/BLUE)) => javafx.scene.control.ColorPicker
+      (type (fx scene :root (fx v-box) :width 800 :height 600)) => javafx.scene.Scene)
+
 (def propbind (atom nil))
 (facts "Property binding"
        (with-state-changes [(before :facts (reset! propbind "New text"))]

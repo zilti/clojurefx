@@ -323,6 +323,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
 ;; Constructor tools
 (defn constructor-helper [clazz & args]
   (run-now (clojure.lang.Reflector/invokeConstructor (resolve clazz) (to-array (remove nil? args)))))
+
 (defmacro construct [clazz keys]
   `(defmethod construct-node '~clazz [cl# ar#]
      (apply constructor-helper cl# (for [k# ~keys] (get ar# k#)))))
@@ -331,9 +332,9 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
 (defmethod construct-node :default [class _]
   (run-now (eval `(new ~class))))
 
-(construct 'javafx.scene.Scene [:root :width :height :depth-buffer :scene-antialiasing])
-(construct 'javafx.stage.Stage [:stage-style])
-(construct 'javafx.scene.control.ColorPicker [:color])
+(construct javafx.scene.Scene [:root :width :height :depth-buffer :scene-antialiasing])
+(construct javafx.stage.Stage [:stage-style])
+(construct javafx.scene.control.ColorPicker [:color])
 
 ;; Argument wrapping
 (defmulti wrap-arg "Autoboxing-like behaviour for arguments for ClojureFX nodes." (fn [arg class] arg))
@@ -352,6 +353,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
     arg))
 
 ;; Builder API
+(def dbg (atom nil))
 (defn fx* [ctrl & args]
   (let [args# (if-not (and (nil? args) (map? args)) (apply hash-map args) args)
         {:keys [bind listen content children]} args#
@@ -361,11 +363,11 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
         qualified-name# (get-qualified ctrl)
         methods# (get-method-calls ctrl)
         args# (dissoc args# :bind :listen)
-        obj# (construct-node qualified-name# args#)
         proc-args# (into {} (for [key# (keys args#)]
-                              (wrap-arg [key# (key# args#)] qualified-name#)))
+                              (wrap-arg [key# (eval (key# args#))] qualified-name#)))
         proc-props# (into {} (for [key# (keys props#)]
-                               [key# (resolve (key# props#))]))]
+                               [key# (resolve (key# props#))]))
+        obj# (construct-node qualified-name# proc-args#)]
     (run-now (doseq [arg# proc-args#] ;; Apply arguments
                (if (contains? methods# (key arg#))
                  (((key arg#) methods#) obj# (val arg#))))
@@ -374,12 +376,18 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
              (doseq [listener# listeners#] ;; Add listeners
                (apply set-listener!* obj# (flatten [(key listener#) (val listener#)])))
              (doseq [entry content#] ;; Set swappables
+               (println entry)
                (apply swap-content! obj# (fn [_] entry)))
              obj#)))
 
 (defmacro fx "
 The central macro of ClojureFX. This takes the name of a node as declared in the pkgs atom and
 named arguments for the constructor arguments and object setters.
+
+Special keys:
+ * `bind` takes a map where the key is a property name (e.g. :text or :grid-lines-visible) and the value an atom. This internally calls `bind-property!`.
+ * `listen` (TBD)
+ * `content` or `children` (equivalent) must be a datastructure a function given to `swap-content!` would return.
 " [ctrl & args]
 `(fx* '~ctrl ~@(for [arg args] `(quote ~arg))))
 
