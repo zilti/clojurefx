@@ -370,12 +370,11 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
         {:keys [bind listen content children]} args#
         props# bind
         listeners# listen
-        content# (merge content children)
+        content# (-> [] (into content) (into children))
         qualified-name# (get-qualified ctrl)
         methods# (get-method-calls ctrl)
         args# (dissoc args# :bind :listen)
         obj# (construct-node qualified-name# args#)]
-    (println content#)
     (run-now (doseq [arg# args#] ;; Apply arguments
                (if (contains? methods# (key arg#))
                  (((key arg#) methods#) obj# (val arg#))))
@@ -383,8 +382,8 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
                (bind-property! obj# (key prop#) (val prop#)))
              (doseq [listener# listeners#] ;; Add listeners
                (set-listener!* obj# (key listener#) (val listener#)))
-             (doseq [entry content#] ;; Set swappables
-               (apply swap-content! obj# (fn [_] entry)))
+             (if-not (empty? content#)
+               (swap-content! obj# (fn [_] content#)))
              obj#)))
 
 (defmacro fx "
@@ -393,7 +392,7 @@ named arguments for the constructor arguments and object setters.
 
 Special keys:
  * `bind` takes a map where the key is a property name (e.g. :text or :grid-lines-visible) and the value an atom. This internally calls `bind-property!`.
- * `listen` (TBD)
+ * `listen` takes a map where the key is an event name (e.g. :on-action) and the value a function handling this event.
  * `content` or `children` (equivalent) must be a datastructure a function given to `swap-content!` would return.
 " [ctrl & args]
 `(fx* '~ctrl ~@args;;(for [arg args] `(quote ~arg))

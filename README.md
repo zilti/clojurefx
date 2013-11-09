@@ -33,7 +33,7 @@ as defn, except that it binds the new JavaFX object to a symbol instead of a fun
   (fx button :text "Hide the window" :listen {:onAction (fn [_] (run-now (.hide stg)))})
   ```
 
-* And you can do it for child elements. Use the key `content` or `children` (equivalent). The value of this key must be a datastructure a function given to `swap-content!` would return. (Does not work yet)
+* And you can do it for child elements. Use the key `content` or `children` (equivalent). The value of this key must be a datastructure a function given to `swap-content!` would return.
 
 ### Modifying
 #### Child elements
