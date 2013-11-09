@@ -239,6 +239,9 @@ The listener gets a preprocessed event map as shown above.
 (defmethod swap-content! javafx.scene.control.Tab [obj fun]
   (.setContent obj (fun (.getContent obj))))
 
+(defmacro getfx "(experimental) fetches a property from a node." [obj prop]
+  `(~(symbol (str "." (prepend-and-camel "get" (name prop)))) ~obj))
+
 ;; ## Builder parsing
 (def pkgs (atom {"javafx.scene.control" '[accordion button cell check-box check-box-tree-item check-menu-item choice-box
                                           color-picker combo-box context-menu custom-menu-item date-picker date-cell hyperlink
@@ -366,7 +369,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
     q))
 
 (defn fx* [ctrl & args]
-  (let [args# (if-not (and (nil? args) (map? args)) (apply hash-map args) args)
+  (let [args# (if-not (and (nil? (first args)) (map? (first args))) (apply hash-map args) (first args))
         {:keys [bind listen content children]} args#
         props# bind
         listeners# listen
