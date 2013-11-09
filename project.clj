@@ -5,7 +5,15 @@
   
   [This Project On GitHub](https://www.github.com/zilti/clojurefx)
 
-**Installation: `[clojurefx \"0.0.8\"]`**"
+**Installation: `[clojurefx \"0.0.8\"]`**
+
+Navigation
+----------
+
+ * <a href=\"#contentcreation\">Content creation / the 'fx' macro</a>
+ * <a href=\"#contentmodification\">Content modification / the 'swap-content!' macro</a>
+ * <a href=\"#databinding\">Data binding / the 'bind-property!'/'bidirectional-bind-property!' macros</a>
+ * <a href=\"#events\">Event handling / the 'set-listener!' macro</a> "
   :url "https://www.github.com/zilti/clojurefx"
   :lein-release {:deploy-via :clojars}
   :license {:name "Eclipse Public License"

@@ -12,7 +12,7 @@ Installation: `[clojurefx "0.0.8"]`
 API
 ---
 
-### Creating
+### [Creating](http://zilti.github.io/clojurefx/#contentcreation)
 The no.1 macro for creation is the fx-macro. Additionally, there's the deffx-macro which does the same
 as defn, except that it binds the new JavaFX object to a symbol instead of a function.
 
@@ -36,14 +36,14 @@ as defn, except that it binds the new JavaFX object to a symbol instead of a fun
 * And you can do it for child elements. Use the key `content` or `children` (equivalent). The value of this key must be a datastructure a function given to `swap-content!` would return.
 
 ### Modifying
-#### Child elements
+#### [Child elements](http://zilti.github.io/clojurefx/#contentmodification)
 Besides the possibility to use the normal Java methods, you can use the `swap-content!` multimethod to modify child-elements.
 The return value of the function you provide becomes the new content of the node.
 
 This works for all layout classes as well as everything with child elements, like combo-box, menu, split-pane and so on.
 
 Note that for split-pane and table-view you get maps; See the source code for details.
-#### Properties
+#### [Properties](http://zilti.github.io/clojurefx/#databinding)
 Currently the only way to modify properties this library provides is using the `bind-property!` function.
 It expects an atom it will listen to, and whenever you change the atom value, this value will be propagated to the property.
 
@@ -61,11 +61,11 @@ It is also possible to bind multiple properties at once in bind-property!. Just 
 
 Other STM objects will follow.
 
-### Acting
+### [Acting](http://zilti.github.io/clojurefx/#events)
 Event handling is really simple. All you need is the action name and a function. Example:
 
 ```clojure
-(set-listener! btn :onAction [x] (run-now (.hide stg)))
+(set-listener! btn :on-action [x] (run-now (.hide stg)))
 ```
 
 Note that your function will get a map. See the source code for further details.

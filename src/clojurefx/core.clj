@@ -57,7 +57,7 @@ Runs the code on the FX application thread and waits until the return value is d
 (defn set->observable [s]
   (javafx.collections.FXCollections/unmodifiableObservableSet s))
 
-;; ## Data binding
+;; ## <a name="databinding"></a> Data binding
 (defmulti bidirectional-bind-property! (fn [type obj prop & args] type))
 
 (defmulti bind-property!* (fn [obj prop target] (type target)))
@@ -81,15 +81,17 @@ Runs the code on the FX application thread and waits until the return value is d
     (run-now (doseq [listener @inv-listeners] (.invalidated listener observable)))
     obj))
 
-(defmacro bind-property! "Binds a property to an atom.
+(defmacro bind-property! "Binds properties to atoms.
 Other STM objects might be supported in the future.
 Whenever the content of the atom changes, this change is propagated to the property.
+
+args is a named-argument-list, where the key is the property name (e.g. :text) and the value the atom.
 " [obj & args]
   (let [m# (apply hash-map args)]
     `(do ~@(for [entry# m#]
              `(bind-property!* ~obj ~(key entry#) ~(val entry#))))))
 
-;; ## Events
+;; ## <a name="events"></a> Events
 (defn- prep-key-code [k]
   {:keycode k
    :name (-> (.getName k) str/lower-case keyword)
@@ -136,22 +138,34 @@ Whenever the content of the atom changes, this change is propagated to the prope
 (defmulti preprocess-event (fn [e] (type e)))
 (defmethod preprocess-event :default [e]
   (prep-event-map e))
+
+;; ### ContextMenuEvent
+
 (defmethod preprocess-event javafx.scene.input.ContextMenuEvent [e]
   (-> (prep-event-map e
                      :pickresult (prep-pickresult (.getPickResult e))
                      :keyboard-trigger? (.isKeyboardTrigger e))
      (add-coords e)))
+
+;; ### InputMethodEvent
+
 (defmethod preprocess-event javafx.scene.input.InputMethodEvent [e]
   (prep-event-map e
                   :caret-position (.getCaretPosition e)
                   :committed (.getCommitted e)
                   :composed (.getComposed e)))
+
+;; ### KeyEvent
+
 (defmethod preprocess-event javafx.scene.input.KeyEvent [e]
   (-> (prep-event-map e
                      :character (.getCharacter e)
                      :code (prep-key-code (.getCode e))
                      :text (.getText e))
      (add-modifiers e)))
+
+;; ### MouseEvent
+
 (defmethod preprocess-event javafx.scene.input.MouseEvent [e]
   (-> (prep-event-map e
                      :button (-> (.getButton e) .valueOf str/lower-case keyword)
@@ -166,6 +180,9 @@ Whenever the content of the atom changes, this change is propagated to the prope
                      :synthesized? (.isSynthesized e))
      (add-modifiers e)
      (add-coords e)))
+
+;; ### TouchEvent
+
 (defmethod preprocess-event javafx.scene.input.TouchEvent [e]
   (prep-event-map e
                   :set-id (.getEventSetId e)
@@ -190,7 +207,7 @@ The listener gets a preprocessed event map as shown above.
 " [obj event args & body]
 `(set-listener!* ~obj ~event (fn ~args ~@body)))
 
-;; ## Content modification
+;; ## <a name="contentmodification"></a> Content modification
 ;; ### Easy modification of child elements.
 ;; Usage: `(swap-content! <object> <modification-function>)`.
 ;; The return value of modification-function becomes the new value.
@@ -373,6 +390,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
     (deref q)
     q))
 
+;; ## <a name="contentcreation"></a> Content creation
 (defn fx* [ctrl & args]
   (let [args# (if-not (and (nil? (first args)) (map? (first args))) (apply hash-map args) (first args))
         {:keys [bind listen content children]} args#
@@ -399,24 +417,12 @@ The central macro of ClojureFX. This takes the name of a node as declared in the
 named arguments for the constructor arguments and object setters.
 
 Special keys:
+
  * `bind` takes a map where the key is a property name (e.g. :text or :grid-lines-visible) and the value an atom. This internally calls `bind-property!`.
  * `listen` takes a map where the key is an event name (e.g. :on-action) and the value a function handling this event.
  * `content` or `children` (equivalent) must be a datastructure a function given to `swap-content!` would return.
 " [ctrl & args]
-`(fx* '~ctrl ~@args;;(for [arg args] `(quote ~arg))
-      ))
+`(fx* '~ctrl ~@args))
 
 (defmacro deffx [name ctrl & props]
   `(def ~name (fx ~ctrl ~@props)))
-
-;; ## TEST
-;; (def title (atom "Hi."))
-;; (deffx rt v-box :children [])
-;; (deffx scn scene :width 800 :height 600 :root rt)
-;; (deffx stg stage :title "Hello ClojureFX!" :scene scn)
-;; (run-now (.show stg))
-
-;; (deffx hidebtn button :text "Hide this window")
-;; (set-listener! hidebtn :onAction [_] (run-now (.hide stg)))
-;; (swap-content! rt #(conj % hidebtn))
-;; (bind-property! stg :title title)
