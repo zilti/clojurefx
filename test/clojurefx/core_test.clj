@@ -39,7 +39,8 @@
          (fact "Boolean binding"
                (-> (fx grid-pane :grid-lines-visible false) (bind-property! :grid-lines-visible propbind) .isGridLinesVisible) => true)
          (fact "Boolean binding at object creation time"
-               (-> (fx grid-pane :bind {:grid-lines-visible propbind}) .isGridLinesVisible) => true)))
+               (-> (fx grid-pane :bind {:grid-lines-visible propbind}) .isGridLinesVisible) => true))
+       (future-fact "Write test for binding of multiple properties in bind-properties! macro."))
 
 (def fireatom (atom nil))
 (facts "Action binding"

@@ -60,12 +60,9 @@ Runs the code on the FX application thread and waits until the return value is d
 ;; ## Data binding
 (defmulti bidirectional-bind-property! (fn [type obj prop & args] type))
 
-(defmulti bind-property! "Binds a property to an atom.
-Other STM objects might be supported in the future.
-Whenever the content of the atom changes, this change is propagated to the property.
-" (fn [obj prop target] (type target)))
+(defmulti bind-property!* (fn [obj prop target] (type target)))
 
-(defmethod bind-property! clojure.lang.Atom [obj prop at]
+(defmethod bind-property!* clojure.lang.Atom [obj prop at]
   (let [listeners (atom [])
         inv-listeners (atom [])
         prop (str (camel prop true) "Property")
@@ -83,6 +80,14 @@ Whenever the content of the atom changes, this change is propagated to the prope
     (run-now (.bind property observable))
     (run-now (doseq [listener @inv-listeners] (.invalidated listener observable)))
     obj))
+
+(defmacro bind-property! "Binds a property to an atom.
+Other STM objects might be supported in the future.
+Whenever the content of the atom changes, this change is propagated to the property.
+" [obj & args]
+  (let [m# (apply hash-map args)]
+    `(do ~@(for [entry# m#]
+             `(bind-property!* ~obj ~(key entry#) ~(val entry#))))))
 
 ;; ## Events
 (defn- prep-key-code [k]
@@ -382,7 +387,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
                (if (contains? methods# (key arg#))
                  (((key arg#) methods#) obj# (val arg#))))
              (doseq [prop# props#] ;; Bind properties
-               (bind-property! obj# (key prop#) (val prop#)))
+               (bind-property!* obj# (key prop#) (val prop#)))
              (doseq [listener# listeners#] ;; Add listeners
                (set-listener!* obj# (key listener#) (val listener#)))
              (if-not (empty? content#)

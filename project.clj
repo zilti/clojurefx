@@ -5,7 +5,7 @@
   
   [This Project On GitHub](https://www.github.com/zilti/clojurefx)
 
-**Installation: `[clojurefx \"0.0.6\"]`**"
+**Installation: `[clojurefx \"0.0.7\"]`**"
   :url "https://www.github.com/zilti/clojurefx"
   :lein-release {:deploy-via :clojars}
   :license {:name "Eclipse Public License"

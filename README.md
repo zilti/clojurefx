@@ -7,7 +7,7 @@ Note that this library is brand-new and lacks a lot of features; I'm heavily wor
 
 Lots of neat features will follow soon!
 
-Installation: `[clojurefx "0.0.6"]`
+Installation: `[clojurefx "0.0.7"]`
 
 API
 ---
@@ -52,6 +52,14 @@ Example:
 ```clojure
 (bind-property! scn :title title-atom)
 ```
+
+It is also possible to bind multiple properties at once in bind-property!. Just use additional named arguments:
+
+```clojure
+(bind-property! scn :width width-atom :height height-atom)
+```
+
+Other STM objects will follow.
 
 ### Acting
 Event handling is really simple. All you need is the action name and a function. Example:
