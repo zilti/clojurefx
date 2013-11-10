@@ -9,6 +9,13 @@ Lots of neat features will follow soon!
 
 Installation: `[clojurefx "0.0.9"]`
 
+Overview
+--------
+ClojureFX essentially is a thin wrapper around JavaFX built using a handful of macros and functions to make the usage
+of JavaFX more idiomatic for clojurians. The following macros are provided: `fx, deffx, getfx, swap-content!, 
+set-listener!, bind-property! and bidirectional-bind-property!`. To run things on the JavaFX-thread, there's `run-now
+and run-later`.
+
 API
 ---
 
@@ -61,6 +68,13 @@ It is also possible to bind multiple properties at once in bind-property!. Just 
 
 Other STM objects will follow.
 
+### Retrieving
+To retrieve data from objects in a more idiomatic way, there's the `getfx`-macro:
+
+```clojure
+(getfx btn :text) ;; instead of (.getText btn)
+```
+
 ### [Acting](http://zilti.github.io/clojurefx/#events)
 Event handling is really simple. All you need is the action name and a function. Example:
 
@@ -69,3 +83,11 @@ Event handling is really simple. All you need is the action name and a function.
 ```
 
 Note that your function will get a map. See the source code for further details.
+
+### Adding support for custom JavaFX elements
+To add support for element collections like JideFX and ControlsFX is simple:
+
+ * Add the class names to the `pkgs` atom at the beginning of your program. The package name as a String is the key,
+   the value is a quoted vector of symbols where each symbol names a class. Note that these names will automatically
+   be camelcased, e.g. `separator-menu-item` in that vector will become `SeparatorMenuItem`.
+ * You'll probably want to add methods to the multimethods `preprocess-event`, `swap-content!`, `wrap-arg` and `construct-node`.
