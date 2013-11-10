@@ -5,7 +5,7 @@
   
   [This Project On GitHub](https://www.github.com/zilti/clojurefx)
 
-**Installation: `[clojurefx \"0.0.8\"]`**
+**Installation: `[clojurefx \"0.0.9\"]`**
 
 Navigation
 ----------

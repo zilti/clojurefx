@@ -7,7 +7,7 @@ Note that this library is brand-new and lacks a lot of features; I'm heavily wor
 
 Lots of neat features will follow soon!
 
-Installation: `[clojurefx "0.0.8"]`
+Installation: `[clojurefx "0.0.9"]`
 
 API
 ---
