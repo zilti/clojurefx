@@ -260,8 +260,10 @@ The listener gets a preprocessed event map as shown above.
 (defmethod swap-content! javafx.scene.control.Tab [obj fun]
   (.setContent obj (fun (.getContent obj))))
 
-(defmacro getfx "(experimental) fetches a property from a node." [obj prop]
-  `(~(symbol (str "." (prepend-and-camel "get" (name prop)))) ~obj))
+(defmacro getfx "fetches a property from a node." [obj prop & args]
+  (if (= \? (subs (name prop) (dec (count (name prop)))))
+    `(~(symbol (str "." (prepend-and-camel "is" (subs (name prop) 0 (dec (count (name prop))))))) ~obj ~@args)
+    `(~(symbol (str "." (prepend-and-camel "get" (name prop)))) ~obj ~@args)))
 
 ;; ## Builder parsing
 (def pkgs (atom {"javafx.scene.control" '[accordion button cell check-box check-box-tree-item check-menu-item choice-box
@@ -428,6 +430,94 @@ Special keys:
 
 (defmethod swap-content! javafx.scene.Scene [obj fun]
   (.setRoot obj (fun (.getRoot obj))))
+
+;; GridPane
+
+(defmethod swap-content! javafx.scene.layout.GridPane [obj fun]
+  (let [data (map #({:node %
+                     :column-index (.getColumnIndex obj %)
+                     :row-index (.getRowIndex obj %)
+                     :column-span (.getColumnSpan obj %)
+                     :row-span (.getRowSpan obj %)
+                     :h-alignment (-> (.getHalignment obj %) .toString str/lower-case keyword)
+                     :v-alignment (-> (.getValignment obj %) .toString str/lower-case keyword)
+                     :h-grow (.getHgrow obj %)
+                     :v-grow (.getVgrow obj %)
+                     :margin (.getMargin obj %)
+                     :fill-height? (.isFillHeight obj %)
+                     :fill-width? (.isFillWidth obj %)}) (.getChildren obj))
+        res (map #(if (map? %) % {:node %}) (fun data))
+        children (.getChildren obj)]
+    (.setAll children (map :node res))
+    (doseq [child res
+            :let [n (:node child)]]
+      (doseq [[k v] child]
+        (case k
+          :column-index (.setColumnIndex obj n v)
+          :row-index (.setRowIndex obj n v)
+          :column-span (.setColumnSpan obj n v)
+          :row-span (.setRowSpan obj n v)
+          :h-alignment (.setHalignment obj n (-> v name str/upper-case javafx.geometry.HPos/valueOf))
+          :v-alignment (.setValignment obj n (-> v name str/upper-case javafx.geometry.VPos/valueOf))
+          :h-grow (.setHgrow obj n v)
+          :v-grow (.setVgrow obj n v)
+          :margin (.setMargin obj n v)
+          :fill-height? (.setFillHeight obj n v)
+          :fill-width? (.setFillWidth obj n v)
+          nil))))
+  obj)
+
+(defn swap-column-constraints! [obj fun]
+  (let [data (map #({:column %
+                     :h-alignment (.getHalignment %)
+                     :h-grow (.getHgrow %)
+                     :max-width (.getMaxWidth %)
+                     :min-width (.getMinWidth %)
+                     :%-width (.getPercentWidth %)
+                     :pref-width (.getPrefWidth %)
+                     :fill-width? (.isFillWidth %)}) (.getColumnConstraints obj))
+        res (fun data)]
+    (.setAll (.getColumnConstraints obj) (to-array []))
+    (doseq [col res
+            :let [const (new javafx.scene.layout.ColumnConstraints)]]
+      (doseq [[k v] col]
+        (case k
+          :h-alignment (.setHalignment const v)
+          :h-grow (.setHgrow const v)
+          :max-width (.setMaxWidth const v)
+          :min-width (.setMinWidth const v)
+          :%-width (.setPercentWidth const v)
+          :pref-width (.setPrefWidth const v)
+          :fill-width? (.setFillWidth const v)
+          nil))
+      (.add (.getColumnConstraints obj) const)))
+  obj)
+
+(defn swap-row-constraints! [obj fun]
+  (let [data (map #({:row %
+                     :v-alignment (.getValignment %)
+                     :v-grow (.getVgrow %)
+                     :max-height (.getMaxHeight %)
+                     :min-height (.getMinHeight %)
+                     :%-height (.getPercentHeight %)
+                     :pref-height (.getPrefHeight %)
+                     :fill-height? (.isFillHeight %)}) (.getRowConstraints obj))
+        res (fun data)]
+    (.setAll (.getRowConstraints obj) (to-array []))
+    (doseq [row res
+            :let [const (new javafx.scene.layout.RowConstraints)]]
+      (doseq [[k v] row]
+        (case k
+          :v-alignment (.setValignment const v)
+          :v-grow (.setVgrow const v)
+          :max-height (.setMaxHeight const v)
+          :min-height (.setMinHeight const v)
+          :%-height (.setPercentHeight const v)
+          :pref-height (.setPrefHeight const v)
+          :fill-height? (.setFillHeight const v)
+          nil))
+      (.add (.getRowConstraints obj) const)))
+  obj)
 
 ;; Table view
 

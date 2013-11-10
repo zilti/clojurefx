@@ -57,3 +57,20 @@
 (facts "Child elements"
        (fact "Simple child elements"
              (-> (fx v-box :children [(fx button)]) .getChildren first type) => javafx.scene.control.Button))
+
+(def gpa (atom nil))
+(facts "GridPane"
+       (fact "Creating an empty GridPane"
+             (type (fx grid-pane)) => javafx.scene.layout.GridPane)
+       (with-state-changes [(before :facts (reset! gpa (fx grid-pane)))]
+         (fact "Adding a raw button"
+               (type (first (.getChildren (swap-content! @gpa (fn [_] [(fx button :text "Hi!")]))))) => javafx.scene.control.Button)
+         (fact "Adding an enriched button"
+               (type (first (.getChildren (swap-content! @gpa (fn [_] [{:node (fx button :text "Hi!")}]))))) => javafx.scene.control.Button)
+         (fact "Adding a button with options"
+               (getfx (first (.getChildren (swap-content! @gpa (fn [_] [{:node (fx button :text "Hi!")
+                                                                        :fill-height? true}]))))
+                      :fill-height?
+                      (first (.getChildren @gpa))) => true))
+       (fact "Setting a button at fx-expansion-time"
+             (type (first (.getChildren (fx grid-pane :children [(fx button)])))) => javafx.scene.control.Button))

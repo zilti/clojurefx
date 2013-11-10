@@ -73,6 +73,7 @@ To retrieve data from objects in a more idiomatic way, there's the `getfx`-macro
 
 ```clojure
 (getfx btn :text) ;; instead of (.getText btn)
+(getfx btn :armed?) ;; instead of (.isArmed btn)
 ```
 
 ### [Acting](http://zilti.github.io/clojurefx/#events)
