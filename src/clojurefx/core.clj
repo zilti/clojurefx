@@ -57,6 +57,16 @@ Runs the code on the FX application thread and waits until the return value is d
 (defn set->observable [s]
   (javafx.collections.FXCollections/unmodifiableObservableSet s))
 
+;; Argument wrapping
+(defmulti wrap-arg "Autoboxing-like behaviour for arguments for ClojureFX nodes." (fn [arg class] arg))
+
+(defmethod wrap-arg :default [arg class] arg)
+
+(defmethod wrap-arg :accelerator [arg _]
+  (if (string? arg)
+    (javafx.scene.input.KeyCombination/keyCombination arg)
+    arg))
+
 ;; ## <a name="databinding"></a> Data binding
 (defmulti bidirectional-bind-property! (fn [type obj prop & args] type))
 
@@ -241,17 +251,6 @@ The listener gets a preprocessed event map as shown above.
     (.setAll (.getItems obj) (:items res))
     (.setAll (.getDividers obj) (:dividers res))))
 
-(defmethod swap-content! javafx.scene.control.TableView [obj fun]
-  (let [data {:items (into [] (.getItems obj))
-              :columns (into [] (.getColumns obj))
-              :sort-order (into [] (.getSortOrder obj))
-              :visible-leaf-columns (into [] (.getVisibleLeafColumns obj))}
-        res (fun data)]
-    (.setAll (.getItems obj) (:items res))
-    (.setAll (.getColumns obj) (:columns res))
-    (.setAll (.getSortOrder obj) (:sort-order res))
-    (.setAll (.getVisibleLeafColumns obj) (:visible-leaf-columns res))))
-
 ;; TODO TreeTableView
 
 (defmethod swap-content! javafx.scene.control.ScrollPane [obj fun]
@@ -357,25 +356,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
 (defmethod construct-node :default [class _]
   (run-now (eval `(new ~class))))
 
-(construct javafx.scene.Scene [:root :width :height :depth-buffer :scene-antialiasing])
-(construct javafx.stage.Stage [:stage-style])
 (construct javafx.scene.control.ColorPicker [:color])
-
-;; Argument wrapping
-(defmulti wrap-arg "Autoboxing-like behaviour for arguments for ClojureFX nodes." (fn [arg class] arg))
-
-(defmethod wrap-arg :default [arg class] arg)
-
-(defmethod wrap-arg :scene-antialiasing [arg class]
-  (clojure.lang.Reflector/getStaticField javafx.scene.SceneAntialiasing (-> arg name str/upper-case)))
-
-(defmethod wrap-arg :stage-style [arg class]
-  (clojure.lang.Reflector/getStaticField javafx.stage.StageStyle (-> arg name str/upper-case)))
-
-(defmethod wrap-arg :accelerator [arg _]
-  (if (string? arg)
-    (javafx.scene.input.KeyCombination/keyCombination arg)
-    arg))
 
 ;; Builder API
 (defn- symbolwalker [q]
@@ -403,7 +384,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
         obj# (construct-node qualified-name# args#)]
     (run-now (doseq [arg# args#] ;; Apply arguments
                (if (contains? methods# (key arg#))
-                 (((key arg#) methods#) obj# (val arg#))))
+                 (((key arg#) methods#) obj# (wrap-arg (val arg#) (type obj#)))))
              (doseq [prop# props#] ;; Bind properties
                (bind-property!* obj# (key prop#) (val prop#)))
              (doseq [listener# listeners#] ;; Add listeners
@@ -421,8 +402,48 @@ Special keys:
  * `bind` takes a map where the key is a property name (e.g. :text or :grid-lines-visible) and the value an atom. This internally calls `bind-property!`.
  * `listen` takes a map where the key is an event name (e.g. :on-action) and the value a function handling this event.
  * `content` or `children` (equivalent) must be a datastructure a function given to `swap-content!` would return.
+
 " [ctrl & args]
 `(fx* '~ctrl ~@args))
 
 (defmacro deffx [name ctrl & props]
   `(def ~name (fx ~ctrl ~@props)))
+
+;; Stage
+
+(construct javafx.stage.Stage [:stage-style])
+
+(defmethod wrap-arg :stage-style [arg class]
+  (clojure.lang.Reflector/getStaticField javafx.stage.StageStyle (-> arg name str/upper-case)))
+
+(defmethod swap-content! javafx.stage.Stage [obj fun]
+  (.setScene obj (fun (.getScene obj))))
+
+;; Scene
+
+(construct javafx.scene.Scene [:root :width :height :depth-buffer :scene-antialiasing])
+
+(defmethod wrap-arg :scene-antialiasing [arg class]
+  (clojure.lang.Reflector/getStaticField javafx.scene.SceneAntialiasing (-> arg name str/upper-case)))
+
+(defmethod swap-content! javafx.scene.Scene [obj fun]
+  (.setRoot obj (fun (.getRoot obj))))
+
+;; Table view
+
+(defmethod wrap-arg :items javafx.scene.control.TableView [arg clazz]
+  (seq->observable arg))
+
+(defmethod wrap-arg :columns javafx.scene.control.TableView [arg clazz]
+  (seq->observable arg))
+
+(defmethod swap-content! javafx.scene.control.TableView [obj fun]
+  (let [data {:items (into [] (.getItems obj))
+              :columns (into [] (.getColumns obj))
+              :sort-order (into [] (.getSortOrder obj))
+              :visible-leaf-columns (into [] (.getVisibleLeafColumns obj))}
+        res (fun data)]
+    (.setAll (.getItems obj) (:items res))
+    (.setAll (.getColumns obj) (:columns res))
+    (.setAll (.getSortOrder obj) (:sort-order res))
+    (.setAll (.getVisibleLeafColumns obj) (:visible-leaf-columns res))))
