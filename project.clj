@@ -1,4 +1,4 @@
-(defproject clojurefx "0.0.9"
+(defproject clojurefx "0.0.10-SNAPSHOT"
   :description "Helper functions and probably a wrapper to simplify usage of JavaFX in Clojure.
 
   This is meant to be used with Java 8. If you add JavaFX 2.2 to your classpath it might still work, but that isn't tested.
