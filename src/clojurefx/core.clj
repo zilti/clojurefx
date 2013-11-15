@@ -244,6 +244,7 @@ The listener gets a preprocessed event map as shown above.
 (def-simple-swapper javafx.scene.control.ToolBar .getItems .setAll)
 (def-simple-swapper javafx.scene.control.TreeItem .getChildren .setAll)
 (def-simple-swapper javafx.scene.control.TreeTableColumn .getColumns .setAll)
+(def-simple-swapper javafx.scene.shape.Path .getElements .setAll)
 
 (defmethod swap-content! javafx.scene.control.SplitPane [obj fun]
   (let [data {:items (into [] (.getItems obj))
