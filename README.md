@@ -7,7 +7,7 @@ Note that this library is brand-new and lacks a lot of features; I'm heavily wor
 
 Lots of neat features will follow soon!
 
-Installation: `[clojurefx "0.0.9"]`
+Installation: `[clojurefx "0.0.10"]`
 
 Overview
 --------
@@ -29,18 +29,18 @@ as defn, except that it binds the new JavaFX object to a symbol instead of a fun
 
 * Instead of camelCase, the normal clojure dashes are used for the class names: button, check-box, v-box, ...
 * The keys for the options are the normal setters, without the "set" word at the beginning: :title :scene :root and so on.
-* Constructor arguments also are given that way, e.g. the :width, :height and :root in the example above.
-* You can directly add property bindings. Give them in a map with the :bind key, example:
+* **Constructor arguments** also are given that way, e.g. the :width, :height and :root in the example above.
+* You can directly add **property bindings**. Give them in a map with the :bind key, example:
   ```clojure
   (fx stage :title "Hello ClojureFX!" :bind {:title title-atom})
   ```
 
-* You can do the same for action listeners, just use the :listen key instead:
+* You can do the same for **action listeners**, just use the :listen key instead:
   ```clojure
   (fx button :text "Hide the window" :listen {:onAction (fn [_] (run-now (.hide stg)))})
   ```
 
-* And you can do it for child elements. Use the key `content` or `children` (equivalent). The value of this key must be a datastructure a function given to `swap-content!` would return.
+* And you can do it for **child elements**. Use the key `content` or `children` (equivalent). The value of this key must be a datastructure a function given to `swap-content!` would return.
 
 ### Modifying
 #### [Child elements](http://zilti.github.io/clojurefx/#contentmodification)
