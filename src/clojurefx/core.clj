@@ -229,6 +229,7 @@ The listener gets a preprocessed event map as shown above.
        (run-now (~setter bunch# (fun# (into [] bunch#)))))))
 
 (def-simple-swapper javafx.scene.layout.Pane .getChildren .setAll)
+(def-simple-swapper javafx.scene.Group .getChildren .setAll)
 (def-simple-swapper javafx.scene.control.Accordion .getPanes .setAll)
 (def-simple-swapper javafx.scene.control.ChoiceBox .getItems .setAll)
 (def-simple-swapper javafx.scene.control.ColorPicker .getCustomColors .setAll)
