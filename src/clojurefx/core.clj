@@ -360,6 +360,8 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
   (run-now (eval `(new ~class))))
 
 (construct javafx.scene.control.ColorPicker [:color])
+(defmethod construct-node javafx.scene.paint.LinearGradient [c {:keys [start-x start-y end-x end-y proportional cycle-method stops]}]
+  (constructor-helper c [start-x start-y end-x end-y proportional cycle-method (into-array javafx.scene.paint.Stop stops)]))
 
 ;; Builder API
 (defn- symbolwalker [q]
