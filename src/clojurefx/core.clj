@@ -361,8 +361,8 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
   (run-now (eval `(new ~class))))
 
 (construct javafx.scene.control.ColorPicker [:color])
-(defmethod construct-node javafx.scene.paint.LinearGradient [c {:keys [start-x start-y end-x end-y proportional cycle-method stops]}]
-  (constructor-helper c [start-x start-y end-x end-y proportional cycle-method (into-array javafx.scene.paint.Stop stops)]))
+(construct javafx.scene.layout.BackgroundImage [:image :repeat-x :repeat-y :position :size])
+(construct javafx.scene.layout.BorderImage [:image :widths :insets :slices :filled :repeat-x :repeat-y]) ;; TODO Wrapper for BorderWidths, BorderRepeat and Insets
 
 ;; Builder API
 (defn- symbolwalker [q]
@@ -434,6 +434,20 @@ Special keys:
 
 (defmethod swap-content! javafx.scene.Scene [obj fun]
   (.setRoot obj (fun (.getRoot obj))))
+
+;; Image
+
+(defmethod construct-node javafx.scene.image.Image [c {:keys [is requested-width requested-height preserve-ratio smooth url background-loading] :as args}]
+  (cond
+   (contains? args :is) (constructor-helper c [is requested-width requested-height preserve-ratio smooth])
+   (and (contains? args :url)
+      (= 2 (count (keys args)))) (constructor-helper c [url background-loading])
+   (constructor-helper c [url requested-width requested-height preserve-ratio smooth background-loading])))
+
+;; LinearGradient
+
+(defmethod construct-node javafx.scene.paint.LinearGradient [c {:keys [start-x start-y end-x end-y proportional cycle-method stops]}]
+  (constructor-helper c [start-x start-y end-x end-y proportional cycle-method (into-array javafx.scene.paint.Stop stops)]))
 
 ;; GridPane
 
