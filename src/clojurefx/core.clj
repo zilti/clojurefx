@@ -222,11 +222,34 @@ The listener gets a preprocessed event map as shown above.
 ;; Usage: `(swap-content! <object> <modification-function>)`.
 ;; The return value of modification-function becomes the new value.
 
-(defmulti swap-content! (fn [obj fun] (class obj)))
+(defmulti swap-content!* (fn [obj fun] (class obj)))
 (defmacro def-simple-swapper [clazz getter setter]
-  `(defmethod swap-content! ~clazz [obj# fun#]
+  `(defmethod swap-content!* ~clazz [obj# fun#]
      (let [bunch# (~getter obj#)]
        (run-now (~setter bunch# (fun# (into [] bunch#)))))))
+
+(defmacro swap-content!
+  ([obj fun] `(do (swap-content!* ~obj ~fun)) ~obj)
+  ([obj f arg & args]
+     `(do (swap-content!* ~obj (fn [x#] (~f x# ~arg ~@args))) ~obj)))
+
+(defmacro conj!
+  ([obj elem]
+     `(swap-content! ~obj conj ~elem))
+  ([obj k elem]
+     `(swap-content! ~obj (fn [x#] (update-in x# [~k] conj ~elem)))))
+
+(defmacro remove!
+  ([obj elem]
+     `(swap-content! ~obj remove (fn [x#] (= x# ~elem))))
+  ([obj k elem]
+     `(swap-content! ~obj (fn [x#] (update-in x# [~k] remove (fn [x#] (= x# ~elem)))))))
+
+(defmacro remove-all!
+  ([obj]
+     `(do (swap-content!* ~obj (fn [x#] [])) ~obj))
+  ([obj k]
+     `(do (swap-content!* ~obj (fn [x#] (update-in x# [~k] (fn [x#] [])))) ~obj)))
 
 (def-simple-swapper javafx.scene.layout.Pane .getChildren .setAll)
 (def-simple-swapper javafx.scene.Group .getChildren .setAll)
@@ -246,7 +269,7 @@ The listener gets a preprocessed event map as shown above.
 (def-simple-swapper javafx.scene.control.TreeTableColumn .getColumns .setAll)
 (def-simple-swapper javafx.scene.shape.Path .getElements .setAll)
 
-(defmethod swap-content! javafx.scene.control.SplitPane [obj fun]
+(defmethod swap-content!* javafx.scene.control.SplitPane [obj fun]
   (let [data {:items (into [] (.getItems obj))
               :dividers (into [] (.getDividers obj))}
         res (fun data)]
@@ -255,11 +278,11 @@ The listener gets a preprocessed event map as shown above.
 
 ;; TODO TreeTableView
 
-(defmethod swap-content! javafx.scene.control.ScrollPane [obj fun]
+(defmethod swap-content!* javafx.scene.control.ScrollPane [obj fun]
   (.setContent obj (fun (.getContent obj))))
-(defmethod swap-content! javafx.scene.control.TitledPane [obj fun]
+(defmethod swap-content!* javafx.scene.control.TitledPane [obj fun]
   (.setContent obj (fun (.getContent obj))))
-(defmethod swap-content! javafx.scene.control.Tab [obj fun]
+(defmethod swap-content!* javafx.scene.control.Tab [obj fun]
   (.setContent obj (fun (.getContent obj))))
 
 (defmacro getfx "fetches a property from a node." [obj prop & args]
@@ -396,7 +419,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
              (doseq [listener# listeners#] ;; Add listeners
                (set-listener!* obj# (key listener#) (val listener#)))
              (if-not (empty? content#)
-               (swap-content! obj# (fn [_] content#)))
+               (swap-content!* obj# (fn [_] content#)))
              obj#)))
 
 (defmacro fx "
@@ -407,7 +430,7 @@ Special keys:
 
  * `bind` takes a map where the key is a property name (e.g. :text or :grid-lines-visible) and the value an atom. This internally calls `bind-property!`.
  * `listen` takes a map where the key is an event name (e.g. :on-action) and the value a function handling this event.
- * `content` or `children` (equivalent) must be a datastructure a function given to `swap-content!` would return.
+ * `content` or `children` (equivalent) must be a datastructure a function given to `swap-content!*` would return.
 
 " [ctrl & args]
 `(fx* '~ctrl ~@args))
@@ -422,7 +445,7 @@ Special keys:
 (defmethod wrap-arg :stage-style [arg class]
   (clojure.lang.Reflector/getStaticField javafx.stage.StageStyle (-> arg name str/upper-case)))
 
-(defmethod swap-content! javafx.stage.Stage [obj fun]
+(defmethod swap-content!* javafx.stage.Stage [obj fun]
   (.setScene obj (fun (.getScene obj))))
 
 ;; Scene
@@ -432,7 +455,7 @@ Special keys:
 (defmethod wrap-arg :scene-antialiasing [arg class]
   (clojure.lang.Reflector/getStaticField javafx.scene.SceneAntialiasing (-> arg name str/upper-case)))
 
-(defmethod swap-content! javafx.scene.Scene [obj fun]
+(defmethod swap-content!* javafx.scene.Scene [obj fun]
   (.setRoot obj (fun (.getRoot obj))))
 
 ;; Image
@@ -442,7 +465,7 @@ Special keys:
    (contains? args :is) (constructor-helper c [is requested-width requested-height preserve-ratio smooth])
    (and (contains? args :url)
       (= 2 (count (keys args)))) (constructor-helper c [url background-loading])
-   (constructor-helper c [url requested-width requested-height preserve-ratio smooth background-loading])))
+   :else (constructor-helper c [url requested-width requested-height preserve-ratio smooth background-loading])))
 
 ;; LinearGradient
 
@@ -451,38 +474,39 @@ Special keys:
 
 ;; GridPane
 
-(defmethod swap-content! javafx.scene.layout.GridPane [obj fun]
-  (let [data (map #({:node %
-                     :column-index (.getColumnIndex obj %)
-                     :row-index (.getRowIndex obj %)
-                     :column-span (.getColumnSpan obj %)
-                     :row-span (.getRowSpan obj %)
-                     :h-alignment (-> (.getHalignment obj %) .toString str/lower-case keyword)
-                     :v-alignment (-> (.getValignment obj %) .toString str/lower-case keyword)
-                     :h-grow (.getHgrow obj %)
-                     :v-grow (.getVgrow obj %)
-                     :margin (.getMargin obj %)
-                     :fill-height? (.isFillHeight obj %)
-                     :fill-width? (.isFillWidth obj %)}) (.getChildren obj))
-        res (map #(if (map? %) % {:node %}) (fun data))
-        children (.getChildren obj)]
-    (.setAll children (map :node res))
-    (doseq [child res
-            :let [n (:node child)]]
-      (doseq [[k v] child]
-        (case k
-          :column-index (.setColumnIndex obj n v)
-          :row-index (.setRowIndex obj n v)
-          :column-span (.setColumnSpan obj n v)
-          :row-span (.setRowSpan obj n v)
-          :h-alignment (.setHalignment obj n (-> v name str/upper-case javafx.geometry.HPos/valueOf))
-          :v-alignment (.setValignment obj n (-> v name str/upper-case javafx.geometry.VPos/valueOf))
-          :h-grow (.setHgrow obj n v)
-          :v-grow (.setVgrow obj n v)
-          :margin (.setMargin obj n v)
-          :fill-height? (.setFillHeight obj n v)
-          :fill-width? (.setFillWidth obj n v)
-          nil))))
+(defmethod swap-content!* javafx.scene.layout.GridPane [obj fun]
+  (run-now
+   (let [data (map #({:node %
+                      :column-index (.getColumnIndex obj %)
+                      :row-index (.getRowIndex obj %)
+                      :column-span (.getColumnSpan obj %)
+                      :row-span (.getRowSpan obj %)
+                      :h-alignment (-> (.getHalignment obj %) .toString str/lower-case keyword)
+                      :v-alignment (-> (.getValignment obj %) .toString str/lower-case keyword)
+                      :h-grow (.getHgrow obj %)
+                      :v-grow (.getVgrow obj %)
+                      :margin (.getMargin obj %)
+                      :fill-height? (.isFillHeight obj %)
+                      :fill-width? (.isFillWidth obj %)}) (.getChildren obj))
+         res (map #(if (map? %) % {:node %}) (fun data))
+         children (.getChildren obj)]
+     (.setAll children (map :node res))
+     (doseq [child res
+             :let [n (:node child)]]
+       (doseq [[k v] child]
+         (case k
+           :column-index (.setColumnIndex obj n v)
+           :row-index (.setRowIndex obj n v)
+           :column-span (.setColumnSpan obj n v)
+           :row-span (.setRowSpan obj n v)
+           :h-alignment (.setHalignment obj n (-> v name str/upper-case javafx.geometry.HPos/valueOf))
+           :v-alignment (.setValignment obj n (-> v name str/upper-case javafx.geometry.VPos/valueOf))
+           :h-grow (.setHgrow obj n v)
+           :v-grow (.setVgrow obj n v)
+           :margin (.setMargin obj n v)
+           :fill-height? (.setFillHeight obj n v)
+           :fill-width? (.setFillWidth obj n v)
+           nil)))))
   obj)
 
 (defn swap-column-constraints! [obj fun]
@@ -491,7 +515,7 @@ Special keys:
                      :h-grow (.getHgrow %)
                      :max-width (.getMaxWidth %)
                      :min-width (.getMinWidth %)
-                     :%-width (.getPercentWidth %)
+                     :percent-width (.getPercentWidth %)
                      :pref-width (.getPrefWidth %)
                      :fill-width? (.isFillWidth %)}) (.getColumnConstraints obj))
         res (fun data)]
@@ -504,7 +528,7 @@ Special keys:
           :h-grow (.setHgrow const v)
           :max-width (.setMaxWidth const v)
           :min-width (.setMinWidth const v)
-          :%-width (.setPercentWidth const v)
+          :percent-width (.setPercentWidth const v)
           :pref-width (.setPrefWidth const v)
           :fill-width? (.setFillWidth const v)
           nil))
@@ -517,7 +541,7 @@ Special keys:
                      :v-grow (.getVgrow %)
                      :max-height (.getMaxHeight %)
                      :min-height (.getMinHeight %)
-                     :%-height (.getPercentHeight %)
+                     :percent-height (.getPercentHeight %)
                      :pref-height (.getPrefHeight %)
                      :fill-height? (.isFillHeight %)}) (.getRowConstraints obj))
         res (fun data)]
@@ -530,7 +554,7 @@ Special keys:
           :v-grow (.setVgrow const v)
           :max-height (.setMaxHeight const v)
           :min-height (.setMinHeight const v)
-          :%-height (.setPercentHeight const v)
+          :percent-height (.setPercentHeight const v)
           :pref-height (.setPrefHeight const v)
           :fill-height? (.setFillHeight const v)
           nil))
@@ -545,7 +569,7 @@ Special keys:
 (defmethod wrap-arg :columns javafx.scene.control.TableView [arg clazz]
   (seq->observable arg))
 
-(defmethod swap-content! javafx.scene.control.TableView [obj fun]
+(defmethod swap-content!* javafx.scene.control.TableView [obj fun]
   (let [data {:items (into [] (.getItems obj))
               :columns (into [] (.getColumns obj))
               :sort-order (into [] (.getSortOrder obj))

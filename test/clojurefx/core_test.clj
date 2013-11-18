@@ -24,6 +24,19 @@
       (type (fx color-picker :color javafx.scene.paint.Color/BLUE)) => javafx.scene.control.ColorPicker
       (type (fx scene :root (fx v-box) :width 800 :height 600)) => javafx.scene.Scene)
 
+(deffx exlbl label :text "Label")
+(def vb (atom nil))
+(facts "Simple content swapping"
+  (with-state-changes [(before :facts (reset! vb (fx v-box :children [(fx button :text "Hi") exlbl])))]
+       (fact "Simple swap-content! usage"
+             (-> (count (getfx (swap-content! @vb conj (fx button :text "H")) :children))) => 3)
+       (fact "conjoining macro"
+             (-> (count (getfx (conj! @vb (fx label :text "ClojureFX")) :children))) => 3)
+       (fact "removing an element"
+             (-> (count (getfx (remove! @vb exlbl) :children))) => 1)
+       (fact "removing everything"
+             (-> (count (getfx (remove-all! @vb) :children))) => 0)))
+
 (def propbind (atom nil))
 (facts "Property binding"
        (with-state-changes [(before :facts (reset! propbind "New text"))]
