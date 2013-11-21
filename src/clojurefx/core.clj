@@ -46,6 +46,17 @@ Runs the code on the FX application thread and waits until the return value is d
   (let [c (camel (str prep "-" s))]
     (str (str/lower-case (subs c 0 1)) (subs c 1))))
 
+
+(defmacro getfx "fetches a property from a node." [obj prop & args]
+  (if (= "?" (subs (name prop) (dec (count (name prop)))))
+    `(~(symbol (str "." (prepend-and-camel "is" (subs (name prop) 0 (dec (count (name prop))))))) ~obj ~@args)
+    `(~(symbol (str "." (prepend-and-camel "get" (name prop)))) ~obj ~@args)))
+
+(defmacro setfx "creates and applies a setter." [obj prop & args]
+  (if (= "?" (subs (name prop) (dec (count (name prop)))))
+    `(~(symbol (str "." (prepend-and-camel "set" (subs (name prop) 0 (dec (count (name prop))))))) ~obj ~@args)
+    `(~(symbol (str "." (prepend-and-camel "set" (name prop)))) ~obj ~@args)))
+
 ;; ## Collection helpers
 ;; This probably isn't the ideal approach for mutable collections. Check back for better ones.
 (defn seq->observable [s]
@@ -132,6 +143,7 @@ args is a named-argument-list, where the key is the property name (e.g. :text) a
               :consume #(.consume e)
               :string (.toString e)}]
     (if (nil? m) prep (merge prep m))))
+
 (defn- add-modifiers [m e]
   (merge m
          {:alt-down? (.isAltDown e)
@@ -139,6 +151,7 @@ args is a named-argument-list, where the key is the property name (e.g. :text) a
           :meta-down? (.isMetaDown e)
           :shift-down? (.isShiftDown e)
           :shortcut-down? (.isShortcutDown e)}))
+
 (defn- add-coords [m e]
   (merge m
          {:screen-coords {:x (.getScreenX e) :y (.getScreenY e)}
@@ -229,7 +242,7 @@ The listener gets a preprocessed event map as shown above.
        (run-now (~setter bunch# (fun# (into [] bunch#)))))))
 
 (defmacro swap-content!
-  ([obj fun] `(do (swap-content!* ~obj ~fun)) ~obj)
+  ([obj fun] `(do (swap-content!* ~obj ~fun) ~obj))
   ([obj f arg & args]
      `(do (swap-content!* ~obj (fn [x#] (~f x# ~arg ~@args))) ~obj)))
 
@@ -284,11 +297,6 @@ The listener gets a preprocessed event map as shown above.
   (.setContent obj (fun (.getContent obj))))
 (defmethod swap-content!* javafx.scene.control.Tab [obj fun]
   (.setContent obj (fun (.getContent obj))))
-
-(defmacro getfx "fetches a property from a node." [obj prop & args]
-  (if (= \? (subs (name prop) (dec (count (name prop)))))
-    `(~(symbol (str "." (prepend-and-camel "is" (subs (name prop) 0 (dec (count (name prop))))))) ~obj ~@args)
-    `(~(symbol (str "." (prepend-and-camel "get" (name prop)))) ~obj ~@args)))
 
 ;; ## Builder parsing
 (def pkgs (atom {"javafx.scene.control" '[accordion button cell check-box check-box-tree-item check-menu-item choice-box

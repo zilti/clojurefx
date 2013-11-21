@@ -81,8 +81,8 @@
          (fact "Adding an enriched button"
                (type (first (.getChildren (swap-content! @gpa (fn [_] [{:node (fx button :text "Hi!")}]))))) => javafx.scene.control.Button)
          (fact "Adding a button with options"
-               (getfx (first (.getChildren (swap-content! @gpa (fn [_] [{:node (fx button :text "Hi!")
-                                                                        :fill-height? true}]))))
+               (getfx (swap-content! @gpa (fn [_] [{:node (fx button :text "Hi!")
+                                                            :fill-height? true}]))
                       :fill-height?
                       (first (.getChildren @gpa))) => true))
        (fact "Setting a button at fx-expansion-time"
