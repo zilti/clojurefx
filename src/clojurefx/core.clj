@@ -31,6 +31,35 @@ Runs the code on the FX application thread and waits until the return value is d
 " [& body]
   `(run-now* (fn [] ~@body)))
 
+(def method-fetcher "Fetches all public methods of a class."
+  (memoize
+   (fn [class]
+     (let [cl (reflect class)
+           current-methods (filter #(contains? (:flags %) :public) (filter :return-type (:members cl)))
+           static-methods (filter #(contains? (:flags %) :static) current-methods)
+           instance-methods (remove #(contains? (:flags %) :static) current-methods)
+           methods {:instance (map :name instance-methods)
+                    :static (map :name static-methods)}]
+       (if (nil? cl)
+         methods
+         (reduce (fn [a b]
+                   (let [b (method-fetcher (resolve b))]
+                     (-> a
+                        (update-in [:instance] #(flatten (conj % (:instance b))))
+                        (update-in [:static] #(flatten (conj % (:static b))))))) methods (:bases cl)))))))
+
+(defmacro exec-method [inst method & args]
+  (let [methods# (method-fetcher (class inst))
+        clazz# (symbol (.getName (class inst)))
+        clazz# (if (= clazz# 'java.lang.Class) inst clazz#)]
+    (cond
+     ((comp not empty?) (filter #(= clazz# %) (:instance methods#)))
+     `(clojure.lang.Reflector/invokeInstanceMethod ~inst ~(name method) ~(to-array args))
+     
+     ((comp not empty?) (filter #(= clazz# %) (:static methods#)))
+     `(clojure.lang.Reflector/invokeStaticMethod ~clazz# ~(name method) ~(to-array args))
+     :else (throw (new Exception "Method not existing.")))))
+
 (defn camel [in & [method?]]
   (let [in (name in)
         in (str/split in #"-")
@@ -45,7 +74,6 @@ Runs the code on the FX application thread and waits until the return value is d
 (defn prepend-and-camel [prep s]
   (let [c (camel (str prep "-" s))]
     (str (str/lower-case (subs c 0 1)) (subs c 1))))
-
 
 (defmacro getfx "fetches a property from a node." [obj prop & args]
   (if (= "?" (subs (name prop) (dec (count (name prop)))))
@@ -350,13 +378,6 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
                                               (if (not (empty? (filter #(= % builder) (get @pkgs k))))
                                                 (symbol (str k "." (camel (name builder))))))))))))
 
-(defn method-fetcher "Fetches all public methods of a class." [class]
-  (let [cl (reflect class)
-        current-methods (filter #(contains? (:flags %) :public) (filter :return-type (:members cl)))]
-    (if (nil? cl)
-      current-methods
-      (reduce #(flatten (conj %1 (method-fetcher (resolve %2)))) current-methods (:bases cl)))))
-
 (defn- uncamelcaseize [sym]
   (let [s (-> sym str seq)]
     (loop [s s
@@ -370,13 +391,15 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
 
 (def get-method-calls (memoize (fn [ctrl]
                                  (let [full (resolve (get-qualified ctrl))
-                                       fns (eval `(method-fetcher ~full))
+                                       fnm (eval `(method-fetcher ~full))
+                                       fns (flatten [(:static fnm) (:instance fnm)])
                                        calls (atom {})]
                                    (doseq [fun fns
-                                           :when (= "set" (subs (str (:name fun)) 0 3))]
+                                           :when (= "set" (subs (str fun) 0 3))]
                                      (swap! calls assoc
-                                            (keyword (uncamelcaseize (subs (name (:name fun)) 3)))
-                                            (eval `(fn [obj# arg#] (. obj# ~(:name fun) arg#)))))
+                                            (keyword (uncamelcaseize (subs (name fun) 3)))
+                                            (eval `(fn [obj# arg#] (. obj# fun arg#)))))
+                                   (println @calls)
                                    @calls))))
 
 ;; Constructor tools
