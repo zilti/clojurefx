@@ -6,6 +6,7 @@
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
+(def dbg (atom []))
 ;; ## Threading helpers
 
 (defn run-later*"
@@ -48,17 +49,17 @@ Runs the code on the FX application thread and waits until the return value is d
                         (update-in [:instance] #(flatten (conj % (:instance b))))
                         (update-in [:static] #(flatten (conj % (:static b))))))) methods (:bases cl)))))))
 
-(defmacro exec-method [inst method & args]
-  (let [methods# (method-fetcher (class inst))
-        clazz# (symbol (.getName (class inst)))
-        clazz# (if (= clazz# 'java.lang.Class) inst clazz#)]
+(defn exec-method [inst method & args]
+  (let [clazz# (symbol (.getName (class inst)))
+        clazz# (if (= clazz# 'java.lang.Class) inst clazz#)
+        methods# (method-fetcher inst)]
     (cond
-     ((comp not empty?) (filter #(= clazz# %) (:instance methods#)))
-     `(clojure.lang.Reflector/invokeInstanceMethod ~inst ~(name method) ~(to-array args))
+     ((comp not empty?) (filter #(= method %) (:instance methods#)))
+     (clojure.lang.Reflector/invokeInstanceMethod inst (name method) (to-array args))
      
-     ((comp not empty?) (filter #(= clazz# %) (:static methods#)))
-     `(clojure.lang.Reflector/invokeStaticMethod ~clazz# ~(name method) ~(to-array args))
-     :else (throw (new Exception "Method not existing.")))))
+     ((comp not empty?) (filter #(= method %) (:static methods#)))
+     (clojure.lang.Reflector/invokeStaticMethod (name clazz#) (name method) (to-array args))
+     :else (throw (new Exception (str "Method not existing: " method))))))
 
 (defn camel [in & [method?]]
   (let [in (name in)
@@ -75,15 +76,19 @@ Runs the code on the FX application thread and waits until the return value is d
   (let [c (camel (str prep "-" s))]
     (str (str/lower-case (subs c 0 1)) (subs c 1))))
 
-(defmacro getfx "fetches a property from a node." [obj prop & args]
-  (if (= "?" (subs (name prop) (dec (count (name prop)))))
-    `(~(symbol (str "." (prepend-and-camel "is" (subs (name prop) 0 (dec (count (name prop))))))) ~obj ~@args)
-    `(~(symbol (str "." (prepend-and-camel "get" (name prop)))) ~obj ~@args)))
+(defn getfx "fetches a property from a node." [obj prop & args]
+  (let [method (if (= "?" (subs (name prop) (dec (count (name prop)))))
+                 (symbol (str (prepend-and-camel "is" (subs (name prop) 0 (dec (count (name prop)))))))
+                 (symbol (str (prepend-and-camel "get" (name prop)))))]
+    (apply exec-method obj method args)))
 
-(defmacro setfx "creates and applies a setter." [obj prop & args]
-  (if (= "?" (subs (name prop) (dec (count (name prop)))))
-    `(~(symbol (str "." (prepend-and-camel "set" (subs (name prop) 0 (dec (count (name prop))))))) ~obj ~@args)
-    `(~(symbol (str "." (prepend-and-camel "set" (name prop)))) ~obj ~@args)))
+(defn setfx "creates and applies a setter." [obj prop & args]
+  (let [method (if (= "?" (subs (name prop) (dec (count (name prop)))))
+                 (symbol (str (prepend-and-camel "set" (subs (name prop) 0 (dec (count (name prop)))))))
+                 (symbol (str (prepend-and-camel "set" (name prop)))))]
+    (apply exec-method obj method args)
+    ;;(eval `(exec-method ~obj ~method ~@args))
+    ))
 
 ;; ## Collection helpers
 ;; This probably isn't the ideal approach for mutable collections. Check back for better ones.
@@ -274,19 +279,19 @@ The listener gets a preprocessed event map as shown above.
   ([obj f arg & args]
      `(do (swap-content!* ~obj (fn [x#] (~f x# ~arg ~@args))) ~obj)))
 
-(defmacro conj!
+(defmacro fx-conj!
   ([obj elem]
      `(swap-content! ~obj conj ~elem))
   ([obj k elem]
      `(swap-content! ~obj (fn [x#] (update-in x# [~k] conj ~elem)))))
 
-(defmacro remove!
+(defmacro fx-remove!
   ([obj elem]
-     `(swap-content! ~obj remove (fn [x#] (= x# ~elem))))
+     `(swap-content! ~obj (fn [x#] (remove #(= % ~elem) x#))))
   ([obj k elem]
-     `(swap-content! ~obj (fn [x#] (update-in x# [~k] remove (fn [x#] (= x# ~elem)))))))
+     `(swap-content! ~obj (fn [x#] (update-in x# [~k] (fn [coll#] (remove #(= % ~elem) coll#)))))))
 
-(defmacro remove-all!
+(defmacro fx-remove-all!
   ([obj]
      `(do (swap-content!* ~obj (fn [x#] [])) ~obj))
   ([obj k]
@@ -398,8 +403,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
                                            :when (= "set" (subs (str fun) 0 3))]
                                      (swap! calls assoc
                                             (keyword (uncamelcaseize (subs (name fun) 3)))
-                                            (eval `(fn [obj# arg#] (. obj# fun arg#)))))
-                                   (println @calls)
+                                            (eval `(fn [obj# arg#] (. obj# ~fun arg#)))))
                                    @calls))))
 
 ;; Constructor tools
@@ -508,17 +512,17 @@ Special keys:
 (defmethod swap-content!* javafx.scene.layout.GridPane [obj fun]
   (run-now
    (let [data (map #({:node %
-                      :column-index (.getColumnIndex obj %)
-                      :row-index (.getRowIndex obj %)
-                      :column-span (.getColumnSpan obj %)
-                      :row-span (.getRowSpan obj %)
-                      :h-alignment (-> (.getHalignment obj %) .toString str/lower-case keyword)
-                      :v-alignment (-> (.getValignment obj %) .toString str/lower-case keyword)
-                      :h-grow (.getHgrow obj %)
-                      :v-grow (.getVgrow obj %)
-                      :margin (.getMargin obj %)
-                      :fill-height? (.isFillHeight obj %)
-                      :fill-width? (.isFillWidth obj %)}) (.getChildren obj))
+                      :column-index (getfx obj :column-index %)
+                      :row-index (getfx obj :row-index %)
+                      :column-span (getfx obj :column-span %)
+                      :row-span (getfx obj :row-span %)
+                      :h-alignment (-> (getfx obj :halignment %) .toString str/lower-case keyword)
+                      :v-alignment (-> (getfx obj :valignment %) .toString str/lower-case keyword)
+                      :h-grow (getfx obj :hgrow %)
+                      :v-grow (getfx obj :vgrow %)
+                      :margin (getfx obj :margin %)
+                      :fill-height? (getfx obj :fill-height? %)
+                      :fill-width? (getfx obj :fill-width? %)}) (.getChildren obj))
          res (map #(if (map? %) % {:node %}) (fun data))
          children (.getChildren obj)]
      (.setAll children (map :node res))
@@ -526,17 +530,17 @@ Special keys:
              :let [n (:node child)]]
        (doseq [[k v] child]
          (case k
-           :column-index (.setColumnIndex obj n v)
-           :row-index (.setRowIndex obj n v)
-           :column-span (.setColumnSpan obj n v)
-           :row-span (.setRowSpan obj n v)
-           :h-alignment (.setHalignment obj n (-> v name str/upper-case javafx.geometry.HPos/valueOf))
-           :v-alignment (.setValignment obj n (-> v name str/upper-case javafx.geometry.VPos/valueOf))
-           :h-grow (.setHgrow obj n v)
-           :v-grow (.setVgrow obj n v)
-           :margin (.setMargin obj n v)
-           :fill-height? (.setFillHeight obj n v)
-           :fill-width? (.setFillWidth obj n v)
+           :column-index (setfx obj :column-index n v)
+           :row-index (setfx obj :row-index n v)
+           :column-span (setfx obj :column-span n v)
+           :row-span (setfx obj :row-span n v)
+           :h-alignment (setfx obj :halignment n (-> v name str/upper-case javafx.geometry.HPos/valueOf))
+           :v-alignment (setfx obj :valignment n (-> v name str/upper-case javafx.geometry.VPos/valueOf))
+           :h-grow (setfx obj :hgrow n v)
+           :v-grow (setfx obj :vgrow n v)
+           :margin (setfx obj :margin n v)
+           :fill-height? (setfx obj :fill-height? n v)
+           :fill-width? (setfx obj :fill-width? n v)
            nil)))))
   obj)
 
