@@ -7,7 +7,7 @@ Note that this library is brand-new and lacks a lot of features; I'm heavily wor
 
 Lots of neat features will follow soon!
 
-Installation: `[clojurefx "0.0.10"]`
+Installation: `[clojurefx "0.0.11"]`
 
 Overview
 --------
@@ -49,7 +49,9 @@ The return value of the function you provide becomes the new content of the node
 
 This works for all layout classes as well as everything with child elements, like combo-box, menu, split-pane and so on.
 
-Note that for split-pane and table-view you get maps; See the source code for details.
+Additionally, there are the helper functions `fx-conj!`, `fx-remove!` and `fx-remove-all!`.
+
+Note that for split-pane and table-view you get maps; See the source code for details (bottom, "Class-specific wrappers").
 #### [Properties](http://zilti.github.io/clojurefx/#databinding)
 Currently the only way to modify properties this library provides is using the `bind-property!` function.
 It expects an atom it will listen to, and whenever you change the atom value, this value will be propagated to the property.
