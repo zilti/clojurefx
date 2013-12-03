@@ -6,7 +6,6 @@
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
-(def dbg (atom []))
 ;; ## Threading helpers
 
 (defn run-later*"
@@ -32,6 +31,8 @@ Runs the code on the FX application thread and waits until the return value is d
 " [& body]
   `(run-now* (fn [] ~@body)))
 
+;; ## Helper functions
+
 (def method-fetcher "Fetches all public methods of a class."
   (memoize
    (fn [class]
@@ -49,6 +50,7 @@ Runs the code on the FX application thread and waits until the return value is d
                         (update-in [:instance] #(flatten (conj % (:instance b))))
                         (update-in [:static] #(flatten (conj % (:static b))))))) methods (:bases cl)))))))
 
+;; TODO inefficient.
 (defn exec-method [inst method & args]
   (let [clazz# (symbol (.getName (class inst)))
         clazz# (if (= clazz# 'java.lang.Class) inst clazz#)
@@ -76,19 +78,19 @@ Runs the code on the FX application thread and waits until the return value is d
   (let [c (camel (str prep "-" s))]
     (str (str/lower-case (subs c 0 1)) (subs c 1))))
 
+;; TODO inefficient.
 (defn getfx "fetches a property from a node." [obj prop & args]
   (let [method (if (= "?" (subs (name prop) (dec (count (name prop)))))
                  (symbol (str (prepend-and-camel "is" (subs (name prop) 0 (dec (count (name prop)))))))
                  (symbol (str (prepend-and-camel "get" (name prop)))))]
     (apply exec-method obj method args)))
 
+;; TODO inefficient.
 (defn setfx "creates and applies a setter." [obj prop & args]
   (let [method (if (= "?" (subs (name prop) (dec (count (name prop)))))
                  (symbol (str (prepend-and-camel "set" (subs (name prop) 0 (dec (count (name prop)))))))
                  (symbol (str (prepend-and-camel "set" (name prop)))))]
-    (apply exec-method obj method args)
-    ;;(eval `(exec-method ~obj ~method ~@args))
-    ))
+    (apply exec-method obj method args)))
 
 ;; ## Collection helpers
 ;; This probably isn't the ideal approach for mutable collections. Check back for better ones.
@@ -473,7 +475,9 @@ Special keys:
 (defmacro deffx [name ctrl & props]
   `(def ~name (fx ~ctrl ~@props)))
 
-;; Stage
+;; ## Class-specific wrappers
+
+;; ### Stage
 
 (construct javafx.stage.Stage [:stage-style])
 
@@ -483,7 +487,7 @@ Special keys:
 (defmethod swap-content!* javafx.stage.Stage [obj fun]
   (.setScene obj (fun (.getScene obj))))
 
-;; Scene
+;; ### Scene
 
 (construct javafx.scene.Scene [:root :width :height :depth-buffer :scene-antialiasing])
 
@@ -493,7 +497,7 @@ Special keys:
 (defmethod swap-content!* javafx.scene.Scene [obj fun]
   (.setRoot obj (fun (.getRoot obj))))
 
-;; Image
+;; ### Image
 
 (defmethod construct-node javafx.scene.image.Image [c {:keys [is requested-width requested-height preserve-ratio smooth url background-loading] :as args}]
   (cond
@@ -502,12 +506,12 @@ Special keys:
       (= 2 (count (keys args)))) (constructor-helper c [url background-loading])
    :else (constructor-helper c [url requested-width requested-height preserve-ratio smooth background-loading])))
 
-;; LinearGradient
+;; ### LinearGradient
 
 (defmethod construct-node javafx.scene.paint.LinearGradient [c {:keys [start-x start-y end-x end-y proportional cycle-method stops]}]
   (constructor-helper c [start-x start-y end-x end-y proportional cycle-method (into-array javafx.scene.paint.Stop stops)]))
 
-;; GridPane
+;; ### GridPane
 
 (defmethod swap-content!* javafx.scene.layout.GridPane [obj fun]
   (run-now
@@ -596,7 +600,7 @@ Special keys:
       (.add (.getRowConstraints obj) const)))
   obj)
 
-;; Table view
+;; ### Table view
 
 (defmethod wrap-arg :items javafx.scene.control.TableView [arg clazz]
   (seq->observable arg))
