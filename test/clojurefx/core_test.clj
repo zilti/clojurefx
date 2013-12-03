@@ -31,11 +31,11 @@
        (fact "Simple swap-content! usage"
              (-> (count (getfx (swap-content! @vb conj (fx button :text "H")) :children))) => 3)
        (fact "conjoining macro"
-             (-> (count (getfx (conj! @vb (fx label :text "ClojureFX")) :children))) => 3)
+             (-> (count (getfx (fx-conj! @vb (fx label :text "ClojureFX")) :children))) => 3)
        (fact "removing an element"
-             (-> (count (getfx (remove! @vb exlbl) :children))) => 1)
+             (-> (count (getfx (fx-remove! @vb exlbl) :children))) => 1)
        (fact "removing everything"
-             (-> (count (getfx (remove-all! @vb) :children))) => 0)))
+             (-> (count (getfx (fx-remove-all! @vb) :children))) => 0)))
 
 (def propbind (atom nil))
 (facts "Property binding"
