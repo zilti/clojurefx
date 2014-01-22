@@ -71,15 +71,31 @@
        (fact "Simple child elements"
              (-> (fx v-box :children [(fx button)]) .getChildren first type) => javafx.scene.control.Button))
 
-(def gpa (atom nil))
+(def gpa (atom (fx grid-pane)))
+(def rawbtn (fx button :text "Hi!"))
+(def enriched-btn (fx button :text "Hi!"))
 (facts "GridPane"
        (fact "Creating an empty GridPane"
              (type (fx grid-pane)) => javafx.scene.layout.GridPane)
-       (with-state-changes [(before :facts (reset! gpa (fx grid-pane)))]
-         (fact "Adding a raw button"
-               (type (first (.getChildren (swap-content! @gpa (fn [_] [(fx button :text "Hi!")]))))) => javafx.scene.control.Button)
-         (fact "Adding an enriched button"
-               (type (first (.getChildren (swap-content! @gpa (fn [_] [{:node (fx button :text "Hi!")}]))))) => javafx.scene.control.Button)
+       (with-state-changes [;;(before :facts (reset! gpa (fx grid-pane)))
+                            ]
+         (facts "raw button"
+                (fact "adding"
+                      (do (fx-conj! @gpa rawbtn)
+                          (count (.getChildren @gpa))) => 1)
+                (fact "type check"
+                      (type (first (.getChildren @gpa))) => javafx.scene.control.Button)
+                (fact "removing"
+                      (do (fx-remove! @gpa rawbtn)
+                          (count (.getChildren @gpa))) => 0))
+         (facts "enriched button"
+                (fact "adding"
+                      (do (fx-conj! @gpa {:node enriched-btn})
+                          (count (.getChildren @gpa))) => 1)
+                (fact "type check"
+                      (type (first (.getChildren @gpa))) => javafx.scene.control.Button)
+                (fact "removing"
+                      (count (getfx (fx-remove! @gpa enriched-btn) :children)) => 0))
          (fact "Adding a button with options"
                (getfx (swap-content! @gpa (fn [_] [{:node (fx button :text "Hi!")
                                                             :fill-height? true}]))

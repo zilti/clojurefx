@@ -289,9 +289,9 @@ The listener gets a preprocessed event map as shown above.
 
 (defmacro fx-remove!
   ([obj elem]
-     `(swap-content! ~obj (fn [x#] (remove #(= % ~elem) x#))))
+     `(swap-content! ~obj (with-meta (fn [x#] (remove #(= % ~elem) x#)) {:modify :children})))
   ([obj k elem]
-     `(swap-content! ~obj (fn [x#] (update-in x# [~k] (fn [coll#] (remove #(= % ~elem) coll#)))))))
+     `(swap-content! ~obj (with-meta (fn [x#] (update-in x# [~k] (fn [coll#] (remove #(= % ~elem) coll#)))) {:modify :children}))))
 
 (defmacro fx-remove-all!
   ([obj]
@@ -515,7 +515,8 @@ Special keys:
 
 (defmethod swap-content!* javafx.scene.layout.GridPane [obj fun]
   (run-now
-   (let [data (map #({:node %
+   (let [mod-children? (= :children (:modify (meta fun)))
+         data (map #({:node %
                       :column-index (getfx obj :column-index %)
                       :row-index (getfx obj :row-index %)
                       :column-span (getfx obj :column-span %)
@@ -527,9 +528,11 @@ Special keys:
                       :margin (getfx obj :margin %)
                       :fill-height? (getfx obj :fill-height? %)
                       :fill-width? (getfx obj :fill-width? %)}) (.getChildren obj))
-         res (map #(if (map? %) % {:node %}) (fun data))
+         fun-input (if mod-children? (.getChildren obj) data)
+         res (map #(if (map? %) % {:node %}) (fun fun-input))
          children (.getChildren obj)]
-     (.setAll children (map :node res))
+     (.setAll children (if mod-children? res (map :node res)))
+     ;; TODO: WTF is going on below this line exactly?
      (doseq [child res
              :let [n (:node child)]]
        (doseq [[k v] child]
