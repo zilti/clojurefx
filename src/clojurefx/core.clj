@@ -32,6 +32,12 @@ Runs the code on the FX application thread and waits until the return value is d
   `(run-now* (fn [] ~@body)))
 
 ;; ## Helper functions
+(defmacro keyword->enum [enum kw]
+  (let [upper (-> kw name str/upper-case)]
+    `(~(symbol (str (name enum) "/" "valueOf")) ~upper)))
+
+(defn enum->keyword [enum]
+  (-> (.toString enum) str/lower-case))
 
 (def method-fetcher "Fetches all public methods of a class."
   (memoize
@@ -267,35 +273,43 @@ The listener gets a preprocessed event map as shown above.
 
 ;; ## <a name="contentmodification"></a> Content modification
 ;; ### Easy modification of child elements.
-;; Usage: `(swap-content! <object> <modification-function>)`.
-;; The return value of modification-function becomes the new value.
-
 (defmulti swap-content!* (fn [obj fun] (class obj)))
 (defmacro def-simple-swapper [clazz getter setter]
   `(defmethod swap-content!* ~clazz [obj# fun#]
      (let [bunch# (~getter obj#)]
        (run-now (~setter bunch# (fun# (into [] bunch#)))))))
 
+;; Usage: `(swap-content! <object> <modification-function>)`.
+;; The return value of modification-function becomes the new value, analogous to how `swap!` works.
+;;
+;; ### Types of implementations
+;; There are two kinds of `swap-content!*` implementations. First there are the simple ones for types like `Menu`, `Accordion` or the basic `Pane`. These simply pass the incoming function the list of children and expect to get such a list back. That kind is usually defined using the `def-simple-swapper`-macro.
+;;
+;; The others are of containers that have multiple content types. e.g. SplitPane: It has items and dividers. Therefore it hands the function a map with the keys `:items` and `:dividers`, each containing a list-like collection with all the items.
+;;
+;; ### Metadata
+;; Metadata can be added to the functions handed to `swap-content!*`. The following metadata must get respected by the implementations with multiple content types:
+;; * **:modify** Allowed values: `:primary`. This means that the given function only accepts the list of the primary child components (usually retrieved using getChildren) as an input.
 (defmacro swap-content!
   ([obj fun] `(do (swap-content!* ~obj ~fun) ~obj))
   ([obj f arg & args]
      `(do (swap-content!* ~obj (fn [x#] (~f x# ~arg ~@args))) ~obj)))
 
-(defmacro fx-conj!
+(defmacro fx-conj! "Conjoins the given element to the end of the list of the primary child elements of obj or the child elements of type k."
   ([obj elem]
      `(swap-content! ~obj conj ~elem))
   ([obj k elem]
      `(swap-content! ~obj (fn [x#] (update-in x# [~k] conj ~elem)))))
 
-(defmacro fx-remove!
+(defmacro fx-remove! "Removes the given element from either the primary child elements of obj, or from the child element type designated by the keyword k. See the specific swap-content!*-implementations to see what types are available."
   ([obj elem]
-     `(swap-content! ~obj (with-meta (fn [x#] (remove #(= % ~elem) x#)) {:modify :children})))
+     `(swap-content! ~obj (with-meta (fn [x#] (remove #(= % ~elem) x#)) {:modify :primary})))
   ([obj k elem]
-     `(swap-content! ~obj (with-meta (fn [x#] (update-in x# [~k] (fn [coll#] (remove #(= % ~elem) coll#)))) {:modify :children}))))
+     `(swap-content! ~obj (fn [x#] (update-in x# [~k] (fn [coll#] (remove #(= % ~elem) coll#)))))))
 
-(defmacro fx-remove-all!
+(defmacro fx-remove-all! "Analogous to fx-remove!, this removes *all* child elements from either the primary or the designated child element type."
   ([obj]
-     `(do (swap-content!* ~obj (fn [x#] [])) ~obj))
+     `(do (swap-content!* ~obj (with-meta (fn [x#] []) {:modify :primary})) ~obj))
   ([obj k]
      `(do (swap-content!* ~obj (fn [x#] (update-in x# [~k] (fn [x#] [])))) ~obj)))
 
@@ -410,15 +424,17 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
 
 ;; Constructor tools
 (defn constructor-helper [clazz & args]
-  (run-now (clojure.lang.Reflector/invokeConstructor (resolve clazz) (to-array (remove nil? args)))))
+  (run-now (clojure.lang.Reflector/invokeConstructor (resolve clazz) (to-array (remove nil? args))))
+  )
 
 (defmacro construct [clazz keys]
   `(defmethod construct-node '~clazz [cl# ar#]
      (apply constructor-helper cl# (for [k# ~keys] (get ar# k#)))))
 
-(defmulti construct-node (fn [class args] class))
+(defmulti construct-node (fn [class args] (resolve class)))
 (defmethod construct-node :default [class _]
-  (run-now (eval `(new ~class))))
+  (run-now (eval `(new ~class)))
+  )
 
 (construct javafx.scene.control.ColorPicker [:color])
 (construct javafx.scene.layout.BackgroundImage [:image :repeat-x :repeat-y :position :size])
@@ -509,13 +525,16 @@ Special keys:
 ;; ### LinearGradient
 
 (defmethod construct-node javafx.scene.paint.LinearGradient [c {:keys [start-x start-y end-x end-y proportional cycle-method stops]}]
-  (constructor-helper c [start-x start-y end-x end-y proportional cycle-method (into-array javafx.scene.paint.Stop stops)]))
+  (let [cycle-method (if (= (type cycle-method) javafx.scene.paint.CycleMethod)
+                       cycle-method
+                       (keyword->enum javafx.scene.paint.CycleMethod cycle-method))]
+    (constructor-helper c (double start-x) (double start-y) (double end-x) (double end-y) proportional cycle-method (into-array javafx.scene.paint.Stop stops))))
 
 ;; ### GridPane
 
 (defmethod swap-content!* javafx.scene.layout.GridPane [obj fun]
   (run-now
-   (let [mod-children? (= :children (:modify (meta fun)))
+   (let [mod-children? (= :primary (:modify (meta fun)))
          data (map #({:node %
                       :column-index (getfx obj :column-index %)
                       :row-index (getfx obj :row-index %)
