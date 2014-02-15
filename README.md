@@ -7,7 +7,7 @@ Note that this library is brand-new and lacks a lot of features; I'm heavily wor
 
 Lots of neat features will follow soon!
 
-Installation: `[clojurefx "0.0.11"]`
+Installation: `[clojurefx "0.0.12"]`
 
 ### Short info about the state of the project
 Right now I'm rather busy and have a few things to do on a deadline. That's why there's little activity right now. Expect more activity in about one to two months. *I will not abandon this project*. Feel free to add stuff (including tests) and send pull requests - I will review them in about two days and accept them if they're allright.
