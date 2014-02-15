@@ -388,7 +388,12 @@ The listener gets a preprocessed event map as shown above.
                                       translate-transition]
                  "javafx.stage" '[stage directory-chooser file-chooser popup]
                  "javafx.geometry" '[bounding-box dimension-2D insets point-2D point-3D rectangle-2D]
-                 "javafx.embed.swing" '[JFX-panel]}))
+                 "javafx.embed.swing" '[JFX-panel]
+                 ;; Controlsfx
+                 "org.controlsfx.control" '[ButtonBar CheckComboBox CheckListView CheckTreeView
+                                            GridCell GridView HyperlinkLabel NotificationPane
+                                            PopOver PropertySheet RangeSlider Rating SegmentedButton]
+                 "org.controlsfx.dialog" '[Dialog]}))
 
 (def get-qualified "
 An exhaustive list of every visual JavaFX component. To add entries, modify the pkgs atom.<br/>
