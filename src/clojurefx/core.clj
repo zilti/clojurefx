@@ -464,7 +464,10 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
         {:keys [bind listen content children]} args#
         props# bind
         listeners# listen
-        content# (-> [] (into content) (into children))
+        content# (if (or (seq? content) (seq? children))
+                   (-> [] (into content) (into children))
+                   (cond (not (nil? content)) content
+                         :else children))
         qualified-name# (get-qualified ctrl)
         methods# (get-method-calls ctrl)
         args# (dissoc args# :bind :listen)
@@ -476,7 +479,8 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
                (bind-property!* obj# (key prop#) (val prop#)))
              (doseq [listener# listeners#] ;; Add listeners
                (set-listener!* obj# (key listener#) (val listener#)))
-             (if-not (empty? content#)
+             (if (or (not (nil? content#))
+                    (and (seq? content#) (not (empty? content#))))
                (swap-content!* obj# (fn [_] content#)))
              obj#)))
 
