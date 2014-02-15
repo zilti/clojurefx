@@ -565,10 +565,10 @@ Special keys:
              :let [n (:node child)]]
        (doseq [[k v] child]
          (case k
-           :column-index (setfx obj :column-index n v)
-           :row-index (setfx obj :row-index n v)
-           :column-span (setfx obj :column-span n v)
-           :row-span (setfx obj :row-span n v)
+           :column-index (setfx obj :column-index n (int v))
+           :row-index (setfx obj :row-index n (int v))
+           :column-span (setfx obj :column-span n (int v))
+           :row-span (setfx obj :row-span n (int v))
            :h-alignment (setfx obj :halignment n (-> v name str/upper-case javafx.geometry.HPos/valueOf))
            :v-alignment (setfx obj :valignment n (-> v name str/upper-case javafx.geometry.VPos/valueOf))
            :h-grow (setfx obj :hgrow n v)
