@@ -1,11 +1,11 @@
-(defproject clojurefx "0.0.13-SNAPSHOT"
+(defproject clojurefx "0.0.13"
   :description "Helper functions and probably a wrapper to simplify usage of JavaFX in Clojure.
 
   This is meant to be used with Java 8. If you add JavaFX 2.2 to your classpath it might still work, but that isn't tested.
   
   [This Project On GitHub](https://www.github.com/zilti/clojurefx)
 
-**Installation: `[clojurefx \"0.0.11\"]`**
+**Installation: `[clojurefx \"0.0.13\"]`**
 
 Navigation
 ----------

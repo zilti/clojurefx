@@ -436,7 +436,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
   `(defmethod construct-node '~clazz [cl# ar#]
      (apply constructor-helper cl# (for [k# ~keys] (get ar# k#)))))
 
-(defmulti construct-node (fn [class args] (resolve class)))
+(defmulti construct-node (fn [class args] class))
 (defmethod construct-node :default [class _]
   (run-now (eval `(new ~class)))
   )
