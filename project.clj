@@ -1,4 +1,4 @@
-(defproject clojurefx "0.0.14-SNAPSHOT"
+(defproject clojurefx "0.0.13"
   :description "Helper functions and probably a wrapper to simplify usage of JavaFX in Clojure.
 
   This is meant to be used with Java 8. If you add JavaFX 2.2 to your classpath it might still work, but that isn't tested.
@@ -18,10 +18,10 @@ Navigation
   :lein-release {:deploy-via :clojars}
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.6.0"]]
-  :plugins [[lein-marginalia "0.8.0"]
-            [lein-midje "3.1.3"]
+  :dependencies [[org.clojure/clojure "1.5.1"]]
+  :plugins [[lein-marginalia "0.7.1"]
+            [lein-midje "3.1.3-RC2"]
             [lein-release "1.0.5"]]
-  :profiles {:dev {:dependencies [[midje "1.6.3"]
+  :profiles {:dev {:dependencies [[midje "1.6-beta1"]
                                   [troncle "0.1.2-SNAPSHOT"]
-                                  [org.clojure/tools.trace "0.7.8"]]}})
+                                  [org.clojure/tools.trace "0.7.6"]]}})

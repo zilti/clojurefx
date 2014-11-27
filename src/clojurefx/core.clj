@@ -100,9 +100,6 @@ Runs the code on the FX application thread and waits until the return value is d
 
 ;; ## Collection helpers
 ;; This probably isn't the ideal approach for mutable collections. Check back for better ones.
-(defn list->observable [l]
-   (javafx.collections.FXCollections/observableArrayList l))
-
 (defn seq->observable [s]
   (javafx.collections.FXCollections/unmodifiableObservableList s))
 
@@ -113,15 +110,14 @@ Runs the code on the FX application thread and waits until the return value is d
   (javafx.collections.FXCollections/unmodifiableObservableSet s))
 
 ;; Argument wrapping
-(defmulti wrap-arg "Autoboxing-like behaviour for arguments for ClojureFX nodes." (fn [arg# clazz] [(key arg#) clazz]))
+(defmulti wrap-arg "Autoboxing-like behaviour for arguments for ClojureFX nodes." (fn [arg class] arg))
 
-(defmethod wrap-arg :default [arg# clazz] (val arg#))
+(defmethod wrap-arg :default [arg class] arg)
 
-(defmethod wrap-arg :accelerator [arg# clazz]
-   (let [arg (val arg#)]
-      (if (string? arg)
-         (javafx.scene.input.KeyCombination/keyCombination arg)
-         arg)))
+(defmethod wrap-arg :accelerator [arg _]
+  (if (string? arg)
+    (javafx.scene.input.KeyCombination/keyCombination arg)
+    arg))
 
 ;; ## <a name="databinding"></a> Data binding
 (defmulti bidirectional-bind-property! (fn [type obj prop & args] type))
@@ -334,7 +330,6 @@ The listener gets a preprocessed event map as shown above.
 (def-simple-swapper javafx.scene.control.TreeItem .getChildren .setAll)
 (def-simple-swapper javafx.scene.control.TreeTableColumn .getColumns .setAll)
 (def-simple-swapper javafx.scene.shape.Path .getElements .setAll)
-(def-simple-swapper javafx.scene.chart.PieChart .getData .setAll)
 
 (defmethod swap-content!* javafx.scene.control.SplitPane [obj fun]
   (let [data {:items (into [] (.getItems obj))
@@ -479,7 +474,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
         obj# (construct-node qualified-name# args#)]
     (run-now (doseq [arg# args#] ;; Apply arguments
                (if (contains? methods# (key arg#))
-                 (((key arg#) methods#) obj# (wrap-arg arg# (type obj#)))))
+                 (((key arg#) methods#) obj# (wrap-arg (val arg#) (type obj#)))))
              (doseq [prop# props#] ;; Bind properties
                (bind-property!* obj# (key prop#) (val prop#)))
              (doseq [listener# listeners#] ;; Add listeners
@@ -511,8 +506,8 @@ Special keys:
 
 (construct javafx.stage.Stage [:stage-style])
 
-(defmethod wrap-arg [:stage-style javafx.stage.Stage] [arg# class]
-  (clojure.lang.Reflector/getStaticField javafx.stage.StageStyle (-> (val arg#) name str/upper-case)))
+(defmethod wrap-arg :stage-style [arg class]
+  (clojure.lang.Reflector/getStaticField javafx.stage.StageStyle (-> arg name str/upper-case)))
 
 (defmethod swap-content!* javafx.stage.Stage [obj fun]
   (.setScene obj (fun (.getScene obj))))
@@ -521,8 +516,8 @@ Special keys:
 
 (construct javafx.scene.Scene [:root :width :height :depth-buffer :scene-antialiasing])
 
-(defmethod wrap-arg [:scene-antialiasing javafx.scene.Scene] [arg# class]
-  (clojure.lang.Reflector/getStaticField javafx.scene.SceneAntialiasing (-> (val arg#) name str/upper-case)))
+(defmethod wrap-arg :scene-antialiasing [arg class]
+  (clojure.lang.Reflector/getStaticField javafx.scene.SceneAntialiasing (-> arg name str/upper-case)))
 
 (defmethod swap-content!* javafx.scene.Scene [obj fun]
   (.setRoot obj (fun (.getRoot obj))))
@@ -638,14 +633,11 @@ Special keys:
 
 ;; ### Table view
 
-(defmethod wrap-arg [:data javafx.scene.chart.PieChart] [arg# clazz]
-  (list->observable (val arg#)))
+(defmethod wrap-arg :items javafx.scene.control.TableView [arg clazz]
+  (seq->observable arg))
 
-(defmethod wrap-arg [:items javafx.scene.control.TableView] [arg# clazz]
-  (seq->observable (val arg#)))
-
-(defmethod wrap-arg [:columns javafx.scene.control.TableView] [arg# clazz]
-  (seq->observable (val arg#)))
+(defmethod wrap-arg :columns javafx.scene.control.TableView [arg clazz]
+  (seq->observable arg))
 
 (defmethod swap-content!* javafx.scene.control.TableView [obj fun]
   (let [data {:items (into [] (.getItems obj))
