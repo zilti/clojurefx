@@ -16,6 +16,5 @@ This is in a very early state, so there isn't much yet. Take a look at the [Cloj
                                  :children [Button {:text "Alright."}]}]}])
 ```
 
-## TODO
-
-Everything.
+## Donations
+[![Gratipay](//img.shields.io/gratipay/zilti.svg)](//gratipay.com/zilti) [![Flattr this](//api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=zilti&url=https%3A%2F%2Fbitbucket.org%2Fzilti%2Fclojurefx)
