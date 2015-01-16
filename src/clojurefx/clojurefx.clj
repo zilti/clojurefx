@@ -4,17 +4,46 @@
             [clojure.core.typed.unsafe :refer [ignore-with-unchecked-cast]]
             [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
-            [clojurefx.protocols :refer :all]))
+            [clojurefx.protocols :refer :all]
+            [clojure.java.io :refer :all]))
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
+
+;; ## Threading helpers
+
+(defn run-later*"
+Simple wrapper for Platform/runLater. You should use run-later.
+" [f]
+(javafx.application.Platform/runLater f))
+
+(defmacro run-later [& body]
+  `(run-later* (fn [] ~@body)))
+
+(defn run-now*"
+A modification of run-later waiting for the running method to return. You should use run-now.
+" [f]
+(if (javafx.application.Platform/isFxApplicationThread)
+  (apply f [])
+  (let [result (promise)]
+    (run-later
+     (deliver result (try (f) (catch Throwable e e))))
+    @result)))
+
+(defmacro run-now "
+Runs the code on the FX application thread and waits until the return value is delivered.
+" [& body]
+`(run-now* (fn [] ~@body)))
+
 (tc-ignore (timbre/refer-timbre))
 
 (import (javafx.scene.control Label TextField TextArea CheckBox ComboBox Menu MenuItem MenuBar
                               MenuButton ContextMenu ToolBar SplitPane ScrollPane Accordion
                               TitledPane TabPane Tab TableColumnBase Labeled)
-        (javafx.scene Node)
+        (javafx.scene Node Scene Parent)
         (javafx.scene.layout Pane VBox)
+        (javafx.stage Stage)
         (javafx.collections FXCollections ObservableList)
+        (javafx.css Styleable)
         (java.util Collection))
 
 ;; TODO This belongs elsewhere.
@@ -68,18 +97,9 @@
 
 (tc-ignore
  (extend-protocol FXId
-   Node
-   (get-id [this] (.getId ^Node this))
-   (set-id! [this id] (tc-assert String id) (.setId ^Node this ^String id) this)
-   Tab
-   (get-id [this] (.getId ^Tab this))
-   (set-id! [this id] (tc-assert String id) (.setId ^Tab this ^String id) this)
-   TableColumnBase
-   (get-id [this] (.getId ^TableColumnBase this))
-   (set-id! [this id] (tc-assert String id) (.setId ^TableColumnBase this ^String id) this)
-   MenuItem
-   (get-id [this] (.getId ^MenuItem this))
-   (set-id! [this id] (tc-assert String id) (.setId ^MenuItem this ^String id) this)))
+   Styleable
+   (get-id [this] (.getId ^Styleable this))
+   (set-id! [this id] (tc-assert String id) (.setId ^Styleable this ^String id) this)))
 
 (tc-ignore
  (extend-protocol FXParent
@@ -132,58 +152,39 @@
    (get-graphic [this] (.getGraphic ^Menu this))
    (set-graphic! [this graphic] (.setGraphic ^Menu this ^Node graphic))))
 
+(tc-ignore
+ (extend-protocol clojure.lang.IObj
+   Node
+   (meta [this] (.getUserData ^Node this))
+   (withMeta [this metadata] (.setUserData ^Node this metadata) this)
+   MenuItem
+   (meta [this] (.getUserData ^MenuItem this))
+   (withMeta [this metadata] (.setUserData ^MenuItem this metadata) this)))
 
-;; TODO Code below probably also belongs somewhere else
-(def getter first)
-(def setter second)
+(extend-protocol FXStyleSetter
+  Node
+  (set-style! [this style] (.setStyle ^Node this ^String style) this)
+  MenuItem
+  (set-style! [this style] (.setStyle ^MenuItem this ^String style) this))
 
-(def translation-map
-  (atom {:text (with-meta [#'get-value #'set-value!] {:argument String :parent FXValue})
-         :value (with-meta [#'get-value #'set-value!] {:argument Object :parent FXValue})
-         :id (with-meta [#'get-id #'set-id!] {:argument String :parent FXId})
-         :graphic (with-meta [#'get-graphic #'set-graphic!] {:argument Node :parent FXGraphic})
-         :content (with-meta [#'get-content #'set-content!] {:argument Node :parent FXContainer})
-         :children (with-meta [#'get-subnodes #'set-subnodes!] {:argument java.util.List :parent FXParent})}))
+(extend-type Styleable
+  FXStyleable
+  (get-css-meta [this] (.getCssMetaData ^Styleable this))
+  (get-pseudo-class-styles [this] (.getPseudoClassStyles ^Styleable this))
+  (get-style [this] (.getStyle ^Styleable this))
+  (get-style-classes [this] (.getStyleClass ^Styleable this))
+  (set-style-classes! [this classes] (.setAll ^ObservableList (.getStyleClass ^Styleable this) classes) this)
+  (get-styleable-parent [this] (.getStyleableParent ^Styleable this))
+  (get-type-selector [this] (.getTypeSelector ^Styleable this)))
 
-(declare compile-o-matic)
-(ann build-node [Any (Map Keyword Any) -> Any])
-(defn build-node [object props]
-  (debug "build-node:" object props)
-  (let [obj (eval `(new ~object))]
-    (doseq [[k v] props]
-      (let [translation (get @translation-map k)
-            {:keys [argument parent]} (meta translation)
-            v (compile-o-matic v)]
-        (trace "Key:" k " " (type k) "Value:" v " " (type v))
-        (when (nil? translation)
-          (throw (Exception. (str "Property" k "not available in translation map."))))
-        ;; (when-not ((pred-substitute argument) v)
-        ;;   (throw (Exception. (str "Input type" v "is not compatible with expected type for" k))))
-        ;; (when-not ((pred-substitute parent) obj)
-        ;;   (throw (Exception. (str "Property" k "not available for class" (class obj)))))
-        ((setter translation) obj v)))
-    obj))
+(extend-type Stage
+  FXStage
+  (get-title [this] (.getTitle ^Stage this))
+  (set-title! [this title] (.setTitle ^Stage this ^String title))
+  (get-scene [this] (.getScene ^Stage this))
+  (set-scene! [this scene] (.setScene ^Stage this ^Scene scene)))
 
-(ann resolv-o-matic [(U String Keyword Symbol Class) -> Class])
-(defn resolv-o-matic [thing]
-  (cond
-    (symbol? thing) (ns-resolve (the-ns 'clojurefx.clojurefx) thing)
-    (keyword? thing) (recur (name thing))
-    (string? thing) (recur (symbol thing))
-    :else thing))
-
-(ann compile [(Vec Any) -> Any])
-(defn compile [[obj params & other]]
-  (assert (map? params))
-  (let [obj (build-node (resolv-o-matic obj) params)]
-    (if (empty? other)
-      obj
-      (flatten (conj (list obj) (compile other))))))
-
-(ann compile-o-matic [Any -> Any])
-(defn compile-o-matic [thing]
-  (if (instance? java.util.List thing)
-    (if (and (not (coll? (first thing))) (map? (second thing)))
-      (compile thing)
-      thing)
-    thing))
+(extend-type Scene
+  FXScene
+  (get-root [this] (.getRoot ^Scene this))
+  (set-root! [this root] (.setRoot ^Scene this ^Parent root) this))

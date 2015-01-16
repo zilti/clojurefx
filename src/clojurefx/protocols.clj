@@ -35,3 +35,35 @@
   FXGraphic
   (get-graphic [this :- A] :- B)
   (set-graphic! [this :- A graphic :- B] :- A))
+
+(defprotocol [[A :variance :covariant :< javafx.css.Styleable]
+              [B :variance :covariant :< javafx.css.Styleable]]
+  FXStyleable
+  "http://download.java.net/jdk8/jfxdocs/javafx/css/Styleable.html"
+  (get-css-meta [this :- A] :- (java.util.List javafx.css.CssMetaData)) ;; TODO
+  (get-pseudo-class-styles [this :- A] :- (javafx.collections.ObservableSet javafx.css.PseudoClass))
+  (get-style [this :- A] :- String)
+  (get-style-classes [this :- A] :- (javafx.collections.ObservableList String))
+  (set-style-classes! [this :- A classes :- java.util.Collection] :- A)
+  (get-styleable-parent [this :- A] :- (U nil B))
+  (get-type-selector [this :- A] :- String))
+
+(defprotocol [[A :variance :covariant]]
+  FXStyleSetter
+  (set-style! [this :- A style :- String] :- A))
+
+(defalias FXStyled (U FXStyleable FXStyleSetter))
+
+(defprotocol [[A :variance :covariant :< javafx.stage.Stage]
+              [B :variance :covariant :< javafx.scene.Scene]]
+  FXStage
+  (get-title [this :- A] :- String)
+  (set-title! [this :- A title :- String] :- A)
+  (get-scene [this :- A] :- B)
+  (set-scene! [this :- A scene :- B] :- A))
+
+(defprotocol [[A :variance :covariant :< javafx.scene.Scene]
+              [B :variance :covariant :< javafx.scene.Parent]]
+  FXScene
+  (get-root [this :- A] :- B)
+  (set-root! [this :- A root :- B] :- A))
