@@ -1,6 +1,8 @@
 clojurefx
 =========
 
+# [We started over and moved to BitBucket.](https://bitbucket.org/zilti/clojurefx)
+
 A Clojure JavaFX wrapper. [Documentation and code can be found here](http://zilti.github.io/clojurefx).
 
 Note that this library is brand-new and lacks a lot of features; I'm heavily working at it. Stay tuned!
