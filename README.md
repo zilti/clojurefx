@@ -4,7 +4,7 @@ A Clojure wrapper to make working with [JavaFX](http://download.java.net/jdk8/jf
 
 ## Features
 
-This is in a very early state, so there isn't much yet, except one thing.
+This is in a very early state, so there isn't much yet. Take a look at the [ClojureFX wiki](https://bitbucket.org/zilti/clojurefx/wiki/Home).
 
 ### Declarative UI programming
 
