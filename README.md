@@ -1,6 +1,8 @@
 # ClojureFX
 
-[![Clojars Project](http://clojars.org/clojurefx/latest-version.svg)](http://clojars.org/clojurefx)
+```clojure
+[clojurefx "0.0.20-SNAPSHOT"]
+```
 
 **Note: This is a complete rewrite, no code has been taken over from the old version on GitHub, and I'm taking a radically different approach.**
 
