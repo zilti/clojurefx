@@ -15,7 +15,11 @@ A Clojure extension to make working with [JavaFX](http://download.java.net/jdk8/
 
 ## Features
 
-This is in a very early state, so there isn't much yet. Take a look at the [ClojureFX wiki](https://bitbucket.org/zilti/clojurefx/wiki/Home) to find out what's done already.
+This is in a very early state, so there isn't much yet. Take a look at the [ClojureFX wiki](https://bitbucket.org/zilti/clojurefx/wiki/Home).
+
+* Declarative EDN GUI structure compilation
+* FXML loading and scripting
+* Turn a scene graph into a flat id-node-map and/or get nodes by id out of a scene graph
 
 ### Declarative UI programming
 
