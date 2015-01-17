@@ -1,6 +1,15 @@
 (ns clojurefx.protocols
-  (:refer-clojure :exclude [atom doseq let fn defn ref dotimes defprotocol loop for send])
+  (:refer-clojure :exclude [atom doseq let fn defn ref dotimes defprotocol loop for send meta with-meta])
   (:require [clojure.core.typed :refer :all]))
+
+;;## Shadows
+
+(defprotocol [[A :variance :covariant]]
+  FXMeta
+  (meta [this :- A] :- (Map Any Any))
+  (with-meta [this :- A metadata :- (Map Any Any)] :- A))
+
+;;## Standard
 
 (declare-protocols FXValue FXId FXParent)
 (defprotocol [[A :variance :covariant]
@@ -53,6 +62,8 @@
   (set-style! [this :- A style :- String] :- A))
 
 (defalias FXStyled (U FXStyleable FXStyleSetter))
+
+;;## Special Types
 
 (defprotocol [[A :variance :covariant :< javafx.stage.Stage]
               [B :variance :covariant :< javafx.scene.Scene]]

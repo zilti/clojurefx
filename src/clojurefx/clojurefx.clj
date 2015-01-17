@@ -1,9 +1,10 @@
 (ns clojurefx.clojurefx
-  (:refer-clojure :exclude [atom doseq let fn defn ref dotimes defprotocol loop for send compile])
+  (:refer-clojure :exclude [atom doseq let fn defn ref dotimes defprotocol loop for send meta with-meta])
   (:require [clojure.core.typed :refer :all]
             [clojure.core.typed.unsafe :refer [ignore-with-unchecked-cast]]
             [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
+            [clojure.zip :as zip]
             [clojurefx.protocols :refer :all]
             [clojure.java.io :refer :all]))
 
@@ -19,8 +20,8 @@ Simple wrapper for Platform/runLater. You should use run-later.
 (defmacro run-later [& body]
   `(run-later* (fn [] ~@body)))
 
-(defn run-now*"
-A modification of run-later waiting for the running method to return. You should use run-now.
+  (defn run-now*"
+  A modification of run-later waiting for the running method to return. You should use run-now.
 " [f]
 (if (javafx.application.Platform/isFxApplicationThread)
   (apply f [])
@@ -29,14 +30,14 @@ A modification of run-later waiting for the running method to return. You should
      (deliver result (try (f) (catch Throwable e e))))
     @result)))
 
-(defmacro run-now "
-Runs the code on the FX application thread and waits until the return value is delivered.
+  (defmacro run-now "
+  Runs the code on the FX application thread and waits until the return value is delivered.
 " [& body]
 `(run-now* (fn [] ~@body)))
 
 (tc-ignore (timbre/refer-timbre))
 
-(import (javafx.scene.control Label TextField TextArea CheckBox ComboBox Menu MenuItem MenuBar
+(import (javafx.scene.control Labeled Label TextField TextArea CheckBox ComboBox Menu MenuItem MenuBar
                               MenuButton ContextMenu ToolBar SplitPane ScrollPane Accordion
                               TitledPane TabPane Tab TableColumnBase Labeled)
         (javafx.scene Node Scene Parent)
@@ -46,12 +47,7 @@ Runs the code on the FX application thread and waits until the return value is d
         (javafx.css Styleable)
         (java.util Collection))
 
-;; TODO This belongs elsewhere.
-(tc-ignore
- (defn load-fxml [filename]
-   (.load (javafx.fxml.FXMLLoader.) (-> filename io/resource io/input-stream))))
-
-;; TODO Use pred-substitute for tc-assert
+;; TODO Use pred-substitute for tc-assert?
 (defn tc-assert [clazz :- Class value :- Any & [message :- String]]
   (try (assert (instance? clazz value))
        (catch AssertionError e (tc-ignore (error (if message message "") e)
@@ -63,9 +59,29 @@ Runs the code on the FX application thread and waits until the return value is d
   (clojure.core.typed/pred* (quote clazz) 'clojurefx.clojurefx
                             (fn [arg] (boolean (instance? clazz arg)))))
 
+(defn pred-protocol [proto check]
+  (let [impls (keys (proto :impls))
+        check (type check)]
+    (reduce #(or %1 (isa? check %2)) false impls)))
+
+;;## Shadows
+
+(extend-protocol FXMeta
+  clojure.lang.IObj
+  (meta [this] (clojure.core/meta this))
+  (with-meta [this metadata] (clojure.core/with-meta this metadata))
+  Node
+  (meta [this] (.getUserData ^Node this))
+  (with-meta [this metadata] (.setUserData ^Node this metadata) this)
+  MenuItem
+  (meta [this] (.getUserData ^MenuItem this))
+  (with-meta [this metadata] (.setUserData ^MenuItem this metadata) this))
+
+;;## Standard
+
 (tc-ignore
  (extend-protocol FXValue
-   Label
+   Labeled
    (get-value [this] (.getText ^Label this))
    (set-value! [this value] (tc-assert String value) (.setText ^Label this ^String value) this)
    TextField
@@ -152,15 +168,6 @@ Runs the code on the FX application thread and waits until the return value is d
    (get-graphic [this] (.getGraphic ^Menu this))
    (set-graphic! [this graphic] (.setGraphic ^Menu this ^Node graphic))))
 
-(tc-ignore
- (extend-protocol clojure.lang.IObj
-   Node
-   (meta [this] (.getUserData ^Node this))
-   (withMeta [this metadata] (.setUserData ^Node this metadata) this)
-   MenuItem
-   (meta [this] (.getUserData ^MenuItem this))
-   (withMeta [this metadata] (.setUserData ^MenuItem this metadata) this)))
-
 (extend-protocol FXStyleSetter
   Node
   (set-style! [this style] (.setStyle ^Node this ^String style) this)
@@ -177,6 +184,8 @@ Runs the code on the FX application thread and waits until the return value is d
   (get-styleable-parent [this] (.getStyleableParent ^Styleable this))
   (get-type-selector [this] (.getTypeSelector ^Styleable this)))
 
+;;## Special Types
+
 (extend-type Stage
   FXStage
   (get-title [this] (.getTitle ^Stage this))
@@ -188,3 +197,31 @@ Runs the code on the FX application thread and waits until the return value is d
   FXScene
   (get-root [this] (.getRoot ^Scene this))
   (set-root! [this root] (.setRoot ^Scene this ^Parent root) this))
+
+;;## IdMapper
+(defn fxzipper [root]
+  (zip/zipper (fn branch? [node]
+                (or (pred-protocol FXParent node) (pred-protocol FXContainer node)))
+              (fn children [node]
+                (if (pred-protocol FXParent node)
+                  (into [] (get-subnodes node))
+                  [(get-content node)]))
+              (fn make-node [node children]
+                (if (pred-protocol FXParent node)
+                  (set-subnodes! node children)
+                  (set-content! node children)))
+              root))
+
+(defn get-node-by-id [graph id]
+  (loop [zipper (fxzipper graph)]
+    (cond (zip/end? zipper) nil
+          (= (get-id (zip/node zipper)) (name id)) (zip/node zipper)
+          :else (recur (zip/next zipper)))))
+
+(defn get-id-map [graph]
+  (loop [zipper (fxzipper graph)
+         ids {}]
+    (if (zip/end? zipper)
+      ids
+      (recur (zip/next zipper)
+             (assoc ids (keyword (get-id (zip/node zipper))) (zip/node zipper))))))

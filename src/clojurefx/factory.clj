@@ -1,11 +1,12 @@
 (ns clojurefx.factory
-  (:refer-clojure :exclude [atom doseq let fn defn ref dotimes defprotocol loop for send compile])
+  (:refer-clojure :exclude [atom doseq let fn defn ref dotimes defprotocol loop for send compile meta with-meta])
   (:require [clojure.core.typed :refer :all]
-            [clojure.core.typed.unsafe :refer [ignore-with-unckecked-cast]]
+            [clojure.core.typed.unsafe :refer [ignore-with-unchecked-cast]]
             [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
-            [clojurefx.clojurefx :refer :all]
-            [clojurefx.protocols :refer :all]))
+            [clojurefx.clojurefx :as fx]
+            [clojurefx.protocols :refer :all])
+  (:import (javafx.scene Scene Node Parent)))
 
 (tc-ignore (timbre/refer-timbre))
 
@@ -22,14 +23,23 @@
 (def setter second)
 
 (def translation-map
-  (atom {:text (with-meta [#'get-value #'set-value!] {:argument String :parent FXValue})
+  (atom {;;; FXValue
+         :text (with-meta [#'get-value #'set-value!] {:argument String :parent FXValue})
          :value (with-meta [#'get-value #'set-value!] {:argument Object :parent FXValue})
+         ;;; FXId
          :id (with-meta [#'get-id #'set-id!] {:argument String :parent FXId})
+         ;;; FXGraphic
          :graphic (with-meta [#'get-graphic #'set-graphic!] {:argument Node :parent FXGraphic})
+         ;;; FXContainer
          :content (with-meta [#'get-content #'set-content!] {:argument Node :parent FXContainer})
+         ;;; FXParent
          :children (with-meta [#'get-subnodes #'set-subnodes!] {:argument java.util.List :parent FXParent})
+         ;;; FXStyleSetter / FXStyleable
+         :style (with-meta [#'get-style #'set-style!] {:argument String :parent FXStyleable})
+         ;;; FXStage
          :title (with-meta [#'get-title #'set-title!] {:argument String :parent FXStage})
          :scene (with-meta [#'get-scene #'set-scene!] {:argument Scene :parent FXStage})
+         ;;; FXScene
          :root (with-meta [#'get-root #'set-root!] {:argument Parent :parent FXScene})}))
 
 (def mandatory-constructor-args
