@@ -26,7 +26,8 @@
       :scm {:url "https://bitbucket.com/zilti/clojurefx"}
       :license {"name" "GNU Lesser General Public License 3.0"
                 "url" "http://www.gnu.org/licenses/lgpl-3.0.txt"}}
- midje {:test-paths #{"test"}}
+ midje {:test-paths #{"test"}
+        :sources #{"src" "test"}}
  typed {:namespaces #{'clojurefx.clojurefx 'clojurefx.protocols 'clojurefx.scripting}}
  repl {:server true})
 
@@ -34,8 +35,6 @@
   []
   (task-options!
    midje {:autotest true})
-
-  (set-env! :resource-paths #{"src" "test"})
   
   (comp (repl)
         (midje)

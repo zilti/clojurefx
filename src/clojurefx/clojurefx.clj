@@ -5,22 +5,26 @@
             [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
             [clojure.zip :as zip]
-            [clojurefx.protocols :refer :all]
+            [clojurefx.protocols :as p]
             [clojure.java.io :refer :all]))
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
 ;; ## Threading helpers
 
-(defn run-later*"
-Simple wrapper for Platform/runLater. You should use run-later.
+(ann run-later* [(Fn [-> Any]) -> nil])
+  (defn run-later*"
+  Simple wrapper for Platform/runLater. You should use run-later.
 " [f]
-(javafx.application.Platform/runLater f))
+(tc-ignore (assert (instance? Runnable f))
+           (javafx.application.Platform/runLater f))
+nil)
 
 (defmacro run-later [& body]
   `(run-later* (fn [] ~@body)))
 
-  (defn run-now*"
+(ann run-now* (All [x] [[-> x] -> x]))
+  (defn run-now* "
   A modification of run-later waiting for the running method to return. You should use run-now.
 " [f]
 (if (javafx.application.Platform/isFxApplicationThread)
@@ -39,48 +43,44 @@ Simple wrapper for Platform/runLater. You should use run-later.
 
 (import (javafx.scene.control Labeled Label TextField TextArea CheckBox ComboBox Menu MenuItem MenuBar
                               MenuButton ContextMenu ToolBar SplitPane ScrollPane Accordion
-                              TitledPane TabPane Tab TableColumnBase Labeled)
+                              TitledPane TabPane Tab TableColumnBase Labeled ButtonBase)
         (javafx.scene Node Scene Parent)
         (javafx.scene.layout Pane VBox)
         (javafx.stage Stage)
         (javafx.collections FXCollections ObservableList)
         (javafx.css Styleable)
+        (javafx.event Event ActionEvent EventTarget)
         (java.util Collection))
 
-;; TODO Use pred-substitute for tc-assert?
 (defn tc-assert [clazz :- Class value :- Any & [message :- String]]
   (try (assert (instance? clazz value))
        (catch AssertionError e (tc-ignore (error (if message message "") e)
                                           (error "Expected:" clazz "Actual:" (type value))
                                           (throw e)))))
 
-(ann pred-substitute [Class -> (Fn [Any -> Boolean])])
-(defn pred-substitute [clazz]
-  (clojure.core.typed/pred* (quote clazz) 'clojurefx.clojurefx
-                            (fn [arg] (boolean (instance? clazz arg)))))
-
-(defn pred-protocol [proto check]
+(defn pred-protocol [proto :- (HMap :mandatory {:impls (Map Keyword Class)}) check :- Any] :- Boolean
   (let [impls (keys (proto :impls))
         check (type check)]
     (reduce #(or %1 (isa? check %2)) false impls)))
 
 ;;## Shadows
 
-(extend-protocol FXMeta
-  clojure.lang.IObj
-  (meta [this] (clojure.core/meta this))
-  (with-meta [this metadata] (clojure.core/with-meta this metadata))
-  Node
-  (meta [this] (.getUserData ^Node this))
-  (with-meta [this metadata] (.setUserData ^Node this metadata) this)
-  MenuItem
-  (meta [this] (.getUserData ^MenuItem this))
-  (with-meta [this metadata] (.setUserData ^MenuItem this metadata) this))
+(tc-ignore
+ (extend-protocol p/FXMeta
+   clojure.lang.IObj
+   (meta [this] (clojure.core/meta this))
+   (with-meta [this metadata] (clojure.core/with-meta this metadata))
+   Node
+   (meta [this] (.getUserData ^Node this))
+   (with-meta [this metadata] (.setUserData ^Node this metadata) this)
+   MenuItem
+   (meta [this] (.getUserData ^MenuItem this))
+   (with-meta [this metadata] (.setUserData ^MenuItem this metadata) this)))
 
 ;;## Standard
 
 (tc-ignore
- (extend-protocol FXValue
+ (extend-protocol p/FXValue
    Labeled
    (get-value [this] (.getText ^Label this))
    (set-value! [this value] (tc-assert String value) (.setText ^Label this ^String value) this)
@@ -112,13 +112,13 @@ Simple wrapper for Platform/runLater. You should use run-later.
    (set-value! [this value] (tc-assert String value) (.setText ^MenuItem this ^String value) this)))
 
 (tc-ignore
- (extend-protocol FXId
+ (extend-protocol p/FXId
    Styleable
    (get-id [this] (.getId ^Styleable this))
    (set-id! [this id] (tc-assert String id) (.setId ^Styleable this ^String id) this)))
 
 (tc-ignore
- (extend-protocol FXParent
+ (extend-protocol p/FXParent
    Pane
    (get-subnodes [this] (.getChildren ^Pane this))
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getChildren ^Pane this) ^Collection nodes) this)
@@ -148,7 +148,7 @@ Simple wrapper for Platform/runLater. You should use run-later.
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getPanes ^Accordion this) ^Collection nodes) this)))
 
 (tc-ignore
- (extend-protocol FXContainer
+ (extend-protocol p/FXContainer
    Tab
    (get-content [this] (.getContent ^Tab this))
    (set-content! [this node] (.setContent ^Tab this ^Node node) this)
@@ -160,7 +160,7 @@ Simple wrapper for Platform/runLater. You should use run-later.
    (set-content! [this node] (.setContent ^ScrollPane this ^Node node) this)))
 
 (tc-ignore
- (extend-protocol FXGraphic
+ (extend-protocol p/FXGraphic
    Labeled
    (get-graphic [this] (.getGraphic ^Labeled this))
    (set-graphic! [this graphic] (.setGraphic ^Labeled this ^Node graphic))
@@ -168,60 +168,99 @@ Simple wrapper for Platform/runLater. You should use run-later.
    (get-graphic [this] (.getGraphic ^Menu this))
    (set-graphic! [this graphic] (.setGraphic ^Menu this ^Node graphic))))
 
-(extend-protocol FXStyleSetter
-  Node
-  (set-style! [this style] (.setStyle ^Node this ^String style) this)
-  MenuItem
-  (set-style! [this style] (.setStyle ^MenuItem this ^String style) this))
+(tc-ignore
+ (extend-protocol p/FXStyleSetter
+   Node
+   (set-style! [this style] (.setStyle ^Node this ^String style) this)
+   MenuItem
+   (set-style! [this style] (.setStyle ^MenuItem this ^String style) this)))
 
-(extend-type Styleable
-  FXStyleable
-  (get-css-meta [this] (.getCssMetaData ^Styleable this))
-  (get-pseudo-class-styles [this] (.getPseudoClassStyles ^Styleable this))
-  (get-style [this] (.getStyle ^Styleable this))
-  (get-style-classes [this] (.getStyleClass ^Styleable this))
-  (set-style-classes! [this classes] (.setAll ^ObservableList (.getStyleClass ^Styleable this) classes) this)
-  (get-styleable-parent [this] (.getStyleableParent ^Styleable this))
-  (get-type-selector [this] (.getTypeSelector ^Styleable this)))
+(tc-ignore
+ (extend-type Styleable
+   p/FXStyleable
+   (get-css-meta [this] (.getCssMetaData ^Styleable this))
+   (get-pseudo-class-styles [this] (.getPseudoClassStyles ^Styleable this))
+   (get-style [this] (.getStyle ^Styleable this))
+   (get-style-classes [this] (.getStyleClass ^Styleable this))
+   (set-style-classes! [this classes] (.setAll ^ObservableList (.getStyleClass ^Styleable this) classes) this)
+   (get-styleable-parent [this] (.getStyleableParent ^Styleable this))
+   (get-type-selector [this] (.getTypeSelector ^Styleable this))))
+
+(declare bind-event)
+(tc-ignore
+ (extend-protocol p/FXOnAction
+   ButtonBase
+   (set-action! [this action] (.setOnAction ^ButtonBase this (bind-event action)) this)
+   (fire! [this] (.fire this))
+   MenuItem
+   (set-action! [this action] (.setOnAction ^ButtonBase this (bind-event action)) this)
+   (fire! [this] (.fire this))))
 
 ;;## Special Types
 
-(extend-type Stage
-  FXStage
-  (get-title [this] (.getTitle ^Stage this))
-  (set-title! [this title] (.setTitle ^Stage this ^String title))
-  (get-scene [this] (.getScene ^Stage this))
-  (set-scene! [this scene] (.setScene ^Stage this ^Scene scene)))
+;;### javafx.event
 
-(extend-type Scene
-  FXScene
-  (get-root [this] (.getRoot ^Scene this))
-  (set-root! [this root] (.setRoot ^Scene this ^Parent root) this))
+(tc-ignore
+ (extend-type Event
+   p/FXEvent
+   (source [this] (.getSource ^Event this))
+   (consume! [this] (.consume ^Event this) this)
+   (copy [this new-src new-target] (.copy ^Event this new-src new-target))
+   (event-type [this] (.getEventType this))
+   (target [this] (.getTarget this))
+   (consumed? [this] (.isConsumed this))))
+
+;;### javafx.stage
+
+(tc-ignore
+ (extend-type Stage
+   p/FXStage
+   (get-title [this] (.getTitle ^Stage this))
+   (set-title! [this title] (.setTitle ^Stage this ^String title))
+   (get-scene [this] (.getScene ^Stage this))
+   (set-scene! [this scene] (.setScene ^Stage this ^Scene scene))))
+
+;;### javafx.scene
+
+(tc-ignore
+ (extend-type Scene
+   p/FXScene
+   (get-root [this] (.getRoot ^Scene this))
+   (set-root! [this root] (.setRoot ^Scene this ^Parent root) this)))
+
+;;## Event handling helper
+(tc-ignore
+ (defn bind-event
+   [handler :- (All [[A :variance :covariant :< Event]] (Fn [A -> Any]))] :- javafx.event.EventHandler
+   (reify javafx.event.EventHandler
+     (handle [_ event] (handler event)))))
 
 ;;## IdMapper
 (defn fxzipper [root]
-  (zip/zipper (fn branch? [node]
-                (or (pred-protocol FXParent node) (pred-protocol FXContainer node)))
-              (fn children [node]
-                (if (pred-protocol FXParent node)
-                  (into [] (get-subnodes node))
-                  [(get-content node)]))
-              (fn make-node [node children]
-                (if (pred-protocol FXParent node)
-                  (set-subnodes! node children)
-                  (set-content! node children)))
+  (zip/zipper (fn branch? [node :- Any] :- Boolean
+                (or (pred-protocol p/FXParent node) (pred-protocol p/FXContainer node)))
+              (fn children [node :- (U p/FXParent p/FXContainer)] :- java.util.List
+                (if (pred-protocol p/FXParent node)
+                  (into [] (p/get-subnodes node))
+                  [(p/get-content node)]))
+              (fn make-node [node :- (U p/FXParent p/FXContainer) children :- Any] :- (U p/FXParent p/FXContainer)
+                (if (pred-protocol p/FXParent node)
+                  (p/set-subnodes! node children)
+                  (p/set-content! node children)))
               root))
 
-(defn get-node-by-id [graph id]
-  (loop [zipper (fxzipper graph)]
-    (cond (zip/end? zipper) nil
-          (= (get-id (zip/node zipper)) (name id)) (zip/node zipper)
-          :else (recur (zip/next zipper)))))
+(tc-ignore
+ (defn get-node-by-id [graph id]
+   (loop [zipper (fxzipper graph)]
+     (cond (zip/end? zipper) nil
+           (= (p/get-id (zip/node zipper)) (name id)) (zip/node zipper)
+           :else (recur (zip/next zipper))))))
 
-(defn get-id-map [graph]
-  (loop [zipper (fxzipper graph)
-         ids {}]
-    (if (zip/end? zipper)
-      ids
-      (recur (zip/next zipper)
-             (assoc ids (keyword (get-id (zip/node zipper))) (zip/node zipper))))))
+(tc-ignore
+ (defn get-id-map [graph]
+   (loop [zipper (fxzipper graph)
+          ids {}]
+     (if (zip/end? zipper)
+       ids
+       (recur (zip/next zipper)
+              (assoc ids (keyword (p/get-id (zip/node zipper))) (zip/node zipper)))))))

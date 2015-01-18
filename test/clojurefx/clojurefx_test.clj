@@ -10,6 +10,16 @@
 
 ;;## Element testing
 
+;;## Event testing
+(def button (new Button))
+(def fired? (atom false))
+(facts "Events"
+       (fact "Adding an event handler"
+             (set-action! button (fn [event] (reset! fired? true))) => button)
+       (fact "Firing the event and checking the result"
+             (do (fire! button)
+                 @fired?) => true))
+
 ;;## IdMapper
 (def example-graph
   (factory/compile

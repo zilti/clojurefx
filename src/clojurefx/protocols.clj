@@ -27,7 +27,7 @@
 (defalias FXElement (U FXValue FXId))
 
 (defprotocol [[A :variance :covariant]
-              [B :variance :covariant]]
+              [B :variance :covariant :< Seqable]]
   FXParent
   "The ClojureFX extension to javafx.scene.Parent."
   (get-subnodes [this :- A] :- B)
@@ -63,7 +63,25 @@
 
 (defalias FXStyled (U FXStyleable FXStyleSetter))
 
+(defprotocol [[A :variance :covariant]]
+  FXOnAction
+  (set-action! [this :- A action :- [javafx.event.EventHandler -> Any]] :- A)
+  (fire! [this :- A] :- nil))
+
 ;;## Special Types
+
+;;### javafx.event
+
+(defprotocol [[A :variance :covariant :< javafx.event.Event]]
+  FXEvent
+  (source [this :- A] :- Any)
+  (consume! [this :- A] :- A)
+  (copy [this :- A newSource :- Object newTarget :- javafx.event.EventTarget] :- A)
+  (event-type [this :- A] :- javafx.event.EventType)
+  (target [this :- A] :- javafx.event.EventTarget)
+  (consumed? [this :- A] :- Boolean))
+
+;;### javafx.stage
 
 (defprotocol [[A :variance :covariant :< javafx.stage.Stage]
               [B :variance :covariant :< javafx.scene.Scene]]
@@ -72,6 +90,8 @@
   (set-title! [this :- A title :- String] :- A)
   (get-scene [this :- A] :- B)
   (set-scene! [this :- A scene :- B] :- A))
+
+;;### javafx.scene
 
 (defprotocol [[A :variance :covariant :< javafx.scene.Scene]
               [B :variance :covariant :< javafx.scene.Parent]]

@@ -22,6 +22,7 @@
 (def getter first)
 (def setter second)
 
+(ann translation-map (Atom1 (Map Keyword (Vec clojure.lang.Var))))
 (def translation-map
   (atom {;;; FXValue
          :text (with-meta [#'get-value #'set-value!] {:argument String :parent FXValue})
