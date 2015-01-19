@@ -15,7 +15,7 @@
          '[zilti.boot-typed :refer [typed]]
          '[adzerk.bootlaces :refer :all])
 
-(def +version+ "0.0.21-SNAPSHOT")
+(def +version+ "0.0.30-SNAPSHOT")
 (bootlaces! +version+)
 
 (task-options!
