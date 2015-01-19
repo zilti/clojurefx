@@ -19,6 +19,7 @@ This is in a very early state, so there isn't much yet. Take a look at the [Cloj
 
 * Declarative EDN GUI structure compilation
 * FXML loading and scripting
+* Simplified event binding (bind a Clojure function to an event trigger)
 * Turn a scene graph into a flat id-node-map and/or get nodes by id out of a scene graph
 
 ### Declarative UI programming
