@@ -37,6 +37,8 @@
          :children (with-meta [#'get-subnodes #'set-subnodes!] {:argument java.util.List :parent FXParent})
          ;;; FXStyleSetter / FXStyleable
          :style (with-meta [#'get-style #'set-style!] {:argument String :parent FXStyleable})
+         ;;; FXOnAction
+         :action (with-meta [#'get-action #'set-action!] {:argument clojure.lang.IFn :parent FXOnAction})
          ;;; FXStage
          :title (with-meta [#'get-title #'set-title!] {:argument String :parent FXStage})
          :scene (with-meta [#'get-scene #'set-scene!] {:argument Scene :parent FXStage})

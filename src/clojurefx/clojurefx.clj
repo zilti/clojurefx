@@ -190,9 +190,11 @@ nil)
 (tc-ignore
  (extend-protocol p/FXOnAction
    ButtonBase
+   (get-action [this] (.getOnAction ^ButtonBase this))
    (set-action! [this action] (.setOnAction ^ButtonBase this (bind-event action)) this)
    (fire! [this] (.fire this))
    MenuItem
+   (get-action [this] (.getOnAction ^MenuItem this))
    (set-action! [this action] (.setOnAction ^ButtonBase this (bind-event action)) this)
    (fire! [this] (.fire this))))
 

@@ -11,13 +11,14 @@
 ;;## Element testing
 
 ;;## Event testing
-(def button (new Button))
+;;(def button (new Button))
+(def button (atom nil))
 (def fired? (atom false))
 (facts "Events"
-       (fact "Adding an event handler"
-             (set-action! button (fn [event] (reset! fired? true))) => button)
+       (fact "Creating button with event handler"
+             (class (reset! button (factory/compile [Button {:action (fn [_] (reset! fired? true))}]))) => javafx.scene.control.Button)
        (fact "Firing the event and checking the result"
-             (do (fire! button)
+             (do (fire! @button)
                  @fired?) => true))
 
 ;;## IdMapper

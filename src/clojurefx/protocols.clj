@@ -65,6 +65,7 @@
 
 (defprotocol [[A :variance :covariant]]
   FXOnAction
+  (get-action [this :- A] :- [javafx.event.EventHandler -> Any])
   (set-action! [this :- A action :- [javafx.event.EventHandler -> Any]] :- A)
   (fire! [this :- A] :- nil))
 
