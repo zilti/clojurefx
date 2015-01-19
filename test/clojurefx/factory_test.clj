@@ -21,11 +21,25 @@
                     ScrollPane {:content [Label {:id "label"
                                                  :text "This rocks."}]}]}])
 
+(def example-graph2
+  [VBox {:id "topBox"
+         :children [Button {:id "button"
+                            :text "Close"}
+                    (new javafx.scene.control.Label "Precompiled")
+                    Button {:id "button2"
+                            :text "OK"}
+                    ScrollPane {:content [Label {:id "label"
+                                                 :text "This rocks."}]}]}])
+
 (def scene-graph (atom nil))
 
 (facts "Vector compilation"
        (fact "Simple element"
              (type (compile [Label {:text "Hello ClojureFX"}])) => javafx.scene.control.Label)
+       (fact "Simple precompiled element"
+             (type (compile [(new Label "Hello Precompiled")])) => javafx.scene.control.Label)
        (fact "Nested structure"
              (type (reset! scene-graph (compile example-graph))) => javafx.scene.layout.VBox
-             (get-id @scene-graph) => "topBox"))
+             (get-id @scene-graph) => "topBox")
+       (fact "Partially precompiled nested structure"
+             (type (reset! scene-graph (compile example-graph2))) => javafx.scene.layout.VBox))

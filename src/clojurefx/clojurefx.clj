@@ -1,12 +1,12 @@
-(ns clojurefx.clojurefx
-  (:refer-clojure :exclude [atom doseq let fn defn ref dotimes defprotocol loop for send meta with-meta])
-  (:require [clojure.core.typed :refer :all]
-            [clojure.core.typed.unsafe :refer [ignore-with-unchecked-cast]]
-            [taoensso.timbre :as timbre]
-            [clojure.java.io :as io]
-            [clojure.zip :as zip]
-            [clojurefx.protocols :as p]
-            [clojure.java.io :refer :all]))
+1(ns clojurefx.clojurefx
+   (:refer-clojure :exclude [atom doseq let fn defn ref dotimes defprotocol loop for send meta with-meta])
+   (:require [clojure.core.typed :refer :all]
+             [clojure.core.typed.unsafe :refer [ignore-with-unchecked-cast]]
+             [taoensso.timbre :as timbre]
+             [clojure.java.io :as io]
+             [clojure.zip :as zip]
+             [clojurefx.protocols :as p]
+             [clojure.java.io :refer :all]))
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 

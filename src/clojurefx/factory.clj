@@ -77,21 +77,24 @@
          eval)
      (apply dissoc props mandatory))))
 
-(ann resolv-o-matic [(U String Keyword Symbol Class) -> Class])
-(defn resolv-o-matic [thing]
-  (cond
-    (symbol? thing) (ns-resolve (the-ns 'clojurefx.clojurefx) thing)
-    (keyword? thing) (recur (name thing))
-    (string? thing) (recur (symbol thing))
-    :else thing))
+;; (ann resolv-o-matic [(U String Keyword Symbol Class) -> Class])
+;; (defn resolv-o-matic [thing]
+;;   (cond
+;;     (symbol? thing) (ns-resolve (the-ns 'clojurefx.clojurefx) thing)
+;;     (keyword? thing) (recur (name thing))
+;;     (string? thing) (recur (symbol thing))
+;;     :else thing))
 
 (ann compile [(Vec Any) -> Any])
-(defn compile [[obj params & other]]
-  (assert (map? params))
-  (let [obj (build-node (resolv-o-matic obj) params)]
-    (if (empty? other)
-      obj
-      (flatten (conj (list obj) (compile other))))))
+(defn compile
+  ([args] (compile args []))
+  ([[obj & other] accu]
+   (cond
+     (nil? obj) accu
+     (and (empty? other) (empty? accu)) obj
+     (and (empty? (rest other)) (empty? accu)) (build-node obj (first other))
+     (class? obj) (recur (rest other) (conj accu (build-node obj (first other))))
+     :else (recur other (conj accu obj)))))
 
 (ann compile-o-matic [Any -> Any])
 (defn compile-o-matic [thing]
@@ -101,3 +104,23 @@
       thing)
     thing))
 
+(comment
+  (import (javafx.scene.layout VBox)
+          (javafx.scene.control Button ScrollPane Label))
+  
+  (def example-graph
+    [VBox {:id "topBox"
+           :children [Button {:id "button"
+                              :text "Close"}
+                      ScrollPane {:content [Label {:id "label"
+                                                   :text "This rocks."}]}]}])
+
+  (def example-graph2
+    [VBox {:id "topBox"
+           :children [Button {:id "button"
+                              :text "Close"}
+                      (new javafx.scene.control.Label "Precompiled")
+                      Button {:id "button2"
+                              :text "OK"}
+                      ScrollPane {:content [Label {:id "label"
+                                                   :text "This rocks."}]}]}]))
