@@ -31,6 +31,11 @@
                     ScrollPane {:content [Label {:id "label"
                                                  :text "This rocks."}]}]}])
 
+(def example-graph3
+  [VBox {:id "topBox"
+         :children [Button {:id "button"
+                            :text "Close"}]}])
+
 (def scene-graph (atom nil))
 
 (facts "Vector compilation"
@@ -42,4 +47,6 @@
              (type (reset! scene-graph (compile example-graph))) => javafx.scene.layout.VBox
              (get-id @scene-graph) => "topBox")
        (fact "Partially precompiled nested structure"
-             (type (reset! scene-graph (compile example-graph2))) => javafx.scene.layout.VBox))
+             (type (reset! scene-graph (compile example-graph2))) => javafx.scene.layout.VBox)
+       (fact "Nested structure where FXParent only has one child"
+             (type (reset! scene-graph (compile example-graph3))) => javafx.scene.layout.VBox))

@@ -39,6 +39,13 @@ nil)
 " [& body]
 `(run-now* (fn [] ~@body)))
 
+  (defn collize "
+  Turns the input into a collection, if it isn't already.
+  " [input]
+  (if (coll? input)
+    input
+    (list input)))
+
 (tc-ignore (timbre/refer-timbre))
 
 (import (javafx.scene.control Labeled Label TextField TextArea CheckBox ComboBox Menu MenuItem MenuBar
@@ -121,31 +128,31 @@ nil)
  (extend-protocol p/FXParent
    Pane
    (get-subnodes [this] (.getChildren ^Pane this))
-   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getChildren ^Pane this) ^Collection nodes) this)
+   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getChildren ^Pane this) (collize nodes)) this)
    TabPane
    (get-subnodes [this] (.getTabs ^TabPane this))
-   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getTabs ^TabPane this) ^Collection nodes) this)
+   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getTabs ^TabPane this) (collize nodes)) this)
    MenuBar
    (get-subnodes [this] (.getMenus ^MenuBar this))
-   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getMenus ^MenuBar this) ^Collection nodes) this)
+   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getMenus ^MenuBar this) (collize nodes)) this)
    Menu
    (get-subnodes [this] (.getItems ^Menu this))
-   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^Menu this) ^Collection nodes) this)
+   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^Menu this) nodes) (collize this))
    MenuButton
    (get-subnodes [this] (.getItems ^MenuButton this))
-   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^MenuButton this) ^Collection nodes) this)
+   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^MenuButton this) (collize nodes)) this)
    ContextMenu
    (get-subnodes [this] (.getItems ^ContextMenu this))
-   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^ContextMenu this) ^Collection nodes) this)
+   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^ContextMenu this) (collize nodes)) this)
    ToolBar
    (get-subnodes [this] (.getItems ^ToolBar this))
-   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^ToolBar this) ^Collection nodes) this)
+   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^ToolBar this) (collize nodes)) this)
    SplitPane
    (get-subnodes [this] (.getItems ^SplitPane this))
-   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^SplitPane this) ^Collection nodes) this)
+   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^SplitPane this) (collize nodes)) this)
    Accordion
    (get-subnodes [this] (.getPanes ^Accordion this))
-   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getPanes ^Accordion this) ^Collection nodes) this)))
+   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getPanes ^Accordion this) (collize nodes)) this)))
 
 (tc-ignore
  (extend-protocol p/FXContainer
