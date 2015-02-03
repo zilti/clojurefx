@@ -25,25 +25,25 @@
 (ann translation-map (Atom1 (Map Keyword (Vec clojure.lang.Var))))
 (def translation-map
   (atom {;;; FXValue
-         :text (with-meta [#'get-value #'set-value!] {:argument String :parent FXValue})
-         :value (with-meta [#'get-value #'set-value!] {:argument Object :parent FXValue})
+         :text (with-meta [#'value #'set-value!] {:argument String :parent FXValue})
+         :value (with-meta [#'value #'set-value!] {:argument Object :parent FXValue})
          ;;; FXId
-         :id (with-meta [#'get-id #'set-id!] {:argument String :parent FXId})
+         :id (with-meta [#'id #'set-id!] {:argument String :parent FXId})
          ;;; FXGraphic
-         :graphic (with-meta [#'get-graphic #'set-graphic!] {:argument Node :parent FXGraphic})
+         :graphic (with-meta [#'graphic #'set-graphic!] {:argument Node :parent FXGraphic})
          ;;; FXContainer
-         :content (with-meta [#'get-content #'set-content!] {:argument Node :parent FXContainer})
+         :content (with-meta [#'content #'set-content!] {:argument Node :parent FXContainer})
          ;;; FXParent
-         :children (with-meta [#'get-subnodes #'set-subnodes!] {:argument java.util.List :parent FXParent})
+         :children (with-meta [#'subnodes #'set-subnodes!] {:argument java.util.List :parent FXParent})
          ;;; FXStyleSetter / FXStyleable
-         :style (with-meta [#'get-style #'set-style!] {:argument String :parent FXStyleable})
+         :style (with-meta [#'style #'set-style!] {:argument String :parent FXStyleable})
          ;;; FXOnAction
-         :action (with-meta [#'get-action #'set-action!] {:argument clojure.lang.IFn :parent FXOnAction})
+         :action (with-meta [#'action #'set-action!] {:argument clojure.lang.IFn :parent FXOnAction})
          ;;; FXStage
-         :title (with-meta [#'get-title #'set-title!] {:argument String :parent FXStage})
-         :scene (with-meta [#'get-scene #'set-scene!] {:argument Scene :parent FXStage})
+         :title (with-meta [#'title #'set-title!] {:argument String :parent FXStage})
+         :scene (with-meta [#'scene #'set-scene!] {:argument Scene :parent FXStage})
          ;;; FXScene
-         :root (with-meta [#'get-root #'set-root!] {:argument Parent :parent FXScene})}))
+         :root (with-meta [#'root #'set-root!] {:argument Parent :parent FXScene})}))
 
 (def mandatory-constructor-args
   (atom {javafx.scene.Scene [:root]}))

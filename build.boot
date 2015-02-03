@@ -1,6 +1,6 @@
                                         ;-*- mode: Clojure;-*-
 (set-env! :resource-paths #{"src"}
-          :dependencies '[[org.clojure/clojure "1.7.0-alpha4"]
+          :dependencies '[[org.clojure/clojure "1.7.0-alpha5"]
                           [com.taoensso/timbre "3.3.1" :exclusions [com.taoensso/carmine]]
                           [org.clojure/core.typed "0.2.77"]
                           [clojure-jsr-223 "0.1.0"]
@@ -8,14 +8,14 @@
                           [boot-deps "0.1.2" :scope "test"]
                           [midje "1.6.3" :scope "test"]
                           [adzerk/bootlaces "0.1.9" :scope "test"]
-                          [zilti/boot-midje "0.1.2" :scope "test"]
+                          [zilti/boot-midje "0.2.1-SNAPSHOT" :scope "test"]
                           [zilti/boot-typed "0.1.1" :scope "test"]])
 
 (require '[zilti.boot-midje :refer [midje]]
          '[zilti.boot-typed :refer [typed]]
          '[adzerk.bootlaces :refer :all])
 
-(def +version+ "0.0.30-SNAPSHOT")
+(def +version+ "0.1.0-SNAPSHOT")
 (bootlaces! +version+)
 
 (task-options!

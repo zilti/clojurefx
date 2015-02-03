@@ -89,19 +89,19 @@ nil)
 (tc-ignore
  (extend-protocol p/FXValue
    Labeled
-   (get-value [this] (.getText ^Label this))
+   (value [this] (.getText ^Label this))
    (set-value! [this value] (tc-assert String value) (.setText ^Label this ^String value) this)
    TextField
-   (get-value [this] (.getText ^TextField this))
+   (value [this] (.getText ^TextField this))
    (set-value! [this value] (tc-assert String value) (.setText ^TextField this ^String value) this)
    TextArea
-   (get-value [this] (.getText ^TextArea this))
+   (value [this] (.getText ^TextArea this))
    (set-value! [this value] (tc-assert String value) (.setText ^TextArea this ^String value) this)
    CheckBox
-   (get-value [this] (.isSelected ^CheckBox this))
+   (value [this] (.isSelected ^CheckBox this))
    (set-value! [this value] (tc-assert Boolean value) (.setSelected ^CheckBox this ^Boolean value) this)
    ComboBox
-   (get-value [this] (let [selection-model (.getSelectionModel ^ComboBox this)
+   (value [this] (let [selection-model (.getSelectionModel ^ComboBox this)
                            _ (assert (not (nil? selection-model)))
                            index (.getSelectedIndex ^javafx.scene.control.SingleSelectionModel selection-model)]
                        (if (>= index 0)
@@ -112,67 +112,67 @@ nil)
                               (if-not (nil? item)
                                 (tc-ignore (.select ^javafx.scene.control.SingleSelectionModel sel-model item)))) this)
    Menu
-   (get-value [this] (.getText ^Menu this))
+   (value [this] (.getText ^Menu this))
    (set-value! [this value] (tc-assert String value) (.setText ^Menu this ^String value) this)
    MenuItem
-   (get-value [this] (.getText ^MenuItem this))
+   (value [this] (.getText ^MenuItem this))
    (set-value! [this value] (tc-assert String value) (.setText ^MenuItem this ^String value) this)))
 
 (tc-ignore
  (extend-protocol p/FXId
    Styleable
-   (get-id [this] (.getId ^Styleable this))
+   (id [this] (.getId ^Styleable this))
    (set-id! [this id] (tc-assert String id) (.setId ^Styleable this ^String id) this)))
 
 (tc-ignore
  (extend-protocol p/FXParent
    Pane
-   (get-subnodes [this] (.getChildren ^Pane this))
+   (subnodes [this] (.getChildren ^Pane this))
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getChildren ^Pane this) (collize nodes)) this)
    TabPane
-   (get-subnodes [this] (.getTabs ^TabPane this))
+   (subnodes [this] (.getTabs ^TabPane this))
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getTabs ^TabPane this) (collize nodes)) this)
    MenuBar
-   (get-subnodes [this] (.getMenus ^MenuBar this))
+   (subnodes [this] (.getMenus ^MenuBar this))
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getMenus ^MenuBar this) (collize nodes)) this)
    Menu
-   (get-subnodes [this] (.getItems ^Menu this))
+   (subnodes [this] (.getItems ^Menu this))
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^Menu this) nodes) (collize this))
    MenuButton
-   (get-subnodes [this] (.getItems ^MenuButton this))
+   (subnodes [this] (.getItems ^MenuButton this))
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^MenuButton this) (collize nodes)) this)
    ContextMenu
-   (get-subnodes [this] (.getItems ^ContextMenu this))
+   (subnodes [this] (.getItems ^ContextMenu this))
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^ContextMenu this) (collize nodes)) this)
    ToolBar
-   (get-subnodes [this] (.getItems ^ToolBar this))
+   (subnodes [this] (.getItems ^ToolBar this))
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^ToolBar this) (collize nodes)) this)
    SplitPane
-   (get-subnodes [this] (.getItems ^SplitPane this))
+   (subnodes [this] (.getItems ^SplitPane this))
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getItems ^SplitPane this) (collize nodes)) this)
    Accordion
-   (get-subnodes [this] (.getPanes ^Accordion this))
+   (subnodes [this] (.getPanes ^Accordion this))
    (set-subnodes! [this nodes] (.setAll ^ObservableList (.getPanes ^Accordion this) (collize nodes)) this)))
 
 (tc-ignore
  (extend-protocol p/FXContainer
    Tab
-   (get-content [this] (.getContent ^Tab this))
+   (content [this] (.getContent ^Tab this))
    (set-content! [this node] (.setContent ^Tab this ^Node node) this)
    TitledPane
-   (get-content [this] (.getContent ^TitledPane this))
+   (content [this] (.getContent ^TitledPane this))
    (set-content! [this node] (.setContent ^TitledPane this ^Node node) this)
    ScrollPane
-   (get-content [this] (.getContent ^ScrollPane this))
+   (content [this] (.getContent ^ScrollPane this))
    (set-content! [this node] (.setContent ^ScrollPane this ^Node node) this)))
 
 (tc-ignore
  (extend-protocol p/FXGraphic
    Labeled
-   (get-graphic [this] (.getGraphic ^Labeled this))
+   (graphic [this] (.getGraphic ^Labeled this))
    (set-graphic! [this graphic] (.setGraphic ^Labeled this ^Node graphic))
    MenuItem
-   (get-graphic [this] (.getGraphic ^Menu this))
+   (graphic [this] (.getGraphic ^Menu this))
    (set-graphic! [this graphic] (.setGraphic ^Menu this ^Node graphic))))
 
 (tc-ignore
@@ -185,23 +185,23 @@ nil)
 (tc-ignore
  (extend-type Styleable
    p/FXStyleable
-   (get-css-meta [this] (.getCssMetaData ^Styleable this))
-   (get-pseudo-class-styles [this] (.getPseudoClassStyles ^Styleable this))
-   (get-style [this] (.getStyle ^Styleable this))
-   (get-style-classes [this] (.getStyleClass ^Styleable this))
+   (css-meta [this] (.getCssMetaData ^Styleable this))
+   (pseudo-class-styles [this] (.getPseudoClassStyles ^Styleable this))
+   (style [this] (.getStyle ^Styleable this))
+   (style-classes [this] (.getStyleClass ^Styleable this))
    (set-style-classes! [this classes] (.setAll ^ObservableList (.getStyleClass ^Styleable this) classes) this)
-   (get-styleable-parent [this] (.getStyleableParent ^Styleable this))
-   (get-type-selector [this] (.getTypeSelector ^Styleable this))))
+   (styleable-parent [this] (.getStyleableParent ^Styleable this))
+   (type-selector [this] (.getTypeSelector ^Styleable this))))
 
 (declare bind-event)
 (tc-ignore
  (extend-protocol p/FXOnAction
    ButtonBase
-   (get-action [this] (.getOnAction ^ButtonBase this))
+   (action [this] (.getOnAction ^ButtonBase this))
    (set-action! [this action] (.setOnAction ^ButtonBase this (bind-event action)) this)
    (fire! [this] (.fire this))
    MenuItem
-   (get-action [this] (.getOnAction ^MenuItem this))
+   (action [this] (.getOnAction ^MenuItem this))
    (set-action! [this action] (.setOnAction ^ButtonBase this (bind-event action)) this)
    (fire! [this] (.fire this))))
 
@@ -224,9 +224,9 @@ nil)
 (tc-ignore
  (extend-type Stage
    p/FXStage
-   (get-title [this] (.getTitle ^Stage this))
+   (title [this] (.getTitle ^Stage this))
    (set-title! [this title] (.setTitle ^Stage this ^String title))
-   (get-scene [this] (.getScene ^Stage this))
+   (scene [this] (.getScene ^Stage this))
    (set-scene! [this scene] (.setScene ^Stage this ^Scene scene))))
 
 ;;### javafx.scene
@@ -234,7 +234,7 @@ nil)
 (tc-ignore
  (extend-type Scene
    p/FXScene
-   (get-root [this] (.getRoot ^Scene this))
+   (root [this] (.getRoot ^Scene this))
    (set-root! [this root] (.setRoot ^Scene this ^Parent root) this)))
 
 ;;## Event handling helper
@@ -250,8 +250,8 @@ nil)
                 (or (pred-protocol p/FXParent node) (pred-protocol p/FXContainer node)))
               (fn children [node :- (U p/FXParent p/FXContainer)] :- java.util.List
                 (if (pred-protocol p/FXParent node)
-                  (into [] (p/get-subnodes node))
-                  [(p/get-content node)]))
+                  (into [] (p/subnodes node))
+                  [(p/content node)]))
               (fn make-node [node :- (U p/FXParent p/FXContainer) children :- Any] :- (U p/FXParent p/FXContainer)
                 (if (pred-protocol p/FXParent node)
                   (p/set-subnodes! node children)
@@ -262,7 +262,7 @@ nil)
  (defn get-node-by-id [graph id]
    (loop [zipper (fxzipper graph)]
      (cond (zip/end? zipper) nil
-           (= (p/get-id (zip/node zipper)) (name id)) (zip/node zipper)
+           (= (p/id (zip/node zipper)) (name id)) (zip/node zipper)
            :else (recur (zip/next zipper))))))
 
 (tc-ignore
@@ -272,4 +272,4 @@ nil)
      (if (zip/end? zipper)
        ids
        (recur (zip/next zipper)
-              (assoc ids (keyword (p/get-id (zip/node zipper))) (zip/node zipper)))))))
+              (assoc ids (keyword (p/id (zip/node zipper))) (zip/node zipper)))))))
