@@ -100,6 +100,8 @@ Runs the code on the FX application thread and waits until the return value is d
 
 ;; ## Collection helpers
 ;; This probably isn't the ideal approach for mutable collections. Check back for better ones.
+(defn list->observable [l]
+   (javafx.collections.FXCollections/observableArrayList l))
 (defn seq->observable [s]
   (javafx.collections.FXCollections/unmodifiableObservableList s))
 
@@ -152,6 +154,25 @@ args is a named-argument-list, where the key is the property name (e.g. :text) a
   (let [m# (apply hash-map args)]
     `(do ~@(for [entry# m#]
              `(bind-property!* ~obj ~(key entry#) ~(val entry#))))))
+
+
+(defn bind-simple-property! [property at]
+   (let [listeners (atom [])
+         inv-listeners (atom [])
+         observable (reify javafx.beans.value.ObservableValue
+                       (^void addListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners conj l))
+                       (^void addListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners conj l))
+                       (^void removeListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners #(remove #{l} %)))
+                       (^void removeListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners #(remove #{l} %)))
+                       (getValue [this] @at))]
+      (add-watch at :simple-listener
+                 (fn [_ r oldS newS]
+                    (run-now (doseq [listener @inv-listeners] (.invalidated listener observable))
+                             (doseq [listener @listeners] (.changed listener observable oldS newS)))))
+      (run-now (.bind property observable))
+      (run-now (doseq [listener @inv-listeners] (.invalidated listener observable)))
+      property))
+
 
 ;; ## <a name="events"></a> Events
 (defn- prep-key-code [k]
@@ -322,6 +343,8 @@ The listener gets a preprocessed event map as shown above.
 (def-simple-swapper javafx.scene.control.ContextMenu .getItems .setAll)
 (def-simple-swapper javafx.scene.control.ListView .getItems .setAll)
 (def-simple-swapper javafx.scene.control.Menu .getItems .setAll)
+(def-simple-swapper javafx.scene.control.MenuButton .getItems .setAll)
+(def-simple-swapper javafx.scene.control.CustomMenuItem .getItems .setAll)
 (def-simple-swapper javafx.scene.control.MenuBar .getMenus .setAll)
 (def-simple-swapper javafx.scene.control.TableColumn .getColumns .setAll)
 (def-simple-swapper javafx.scene.control.TabPane .getTabs .setAll)
@@ -330,6 +353,14 @@ The listener gets a preprocessed event map as shown above.
 (def-simple-swapper javafx.scene.control.TreeItem .getChildren .setAll)
 (def-simple-swapper javafx.scene.control.TreeTableColumn .getColumns .setAll)
 (def-simple-swapper javafx.scene.shape.Path .getElements .setAll)
+(def-simple-swapper javafx.scene.chart.PieChart .getData .setAll)
+(def-simple-swapper javafx.scene.chart.XYChart .getData .setAll)
+(def-simple-swapper javafx.scene.chart.LineChart .getData .setAll)
+(def-simple-swapper javafx.scene.chart.BarChart .getData .setAll)
+(def-simple-swapper javafx.scene.chart.AreaChart .getData .setAll)
+(def-simple-swapper javafx.scene.chart.StackedAreaChart .getData .setAll)
+(def-simple-swapper javafx.scene.chart.ScatterChart .getData .setAll)
+
 
 (defmethod swap-content!* javafx.scene.control.SplitPane [obj fun]
   (let [data {:items (into [] (.getItems obj))
@@ -340,6 +371,8 @@ The listener gets a preprocessed event map as shown above.
 
 ;; TODO TreeTableView
 
+(defmethod swap-content!* javafx.scene.control.CustomMenuItem [obj fun]
+   (.setContent obj (fun (.getContent obj))))
 (defmethod swap-content!* javafx.scene.control.ScrollPane [obj fun]
   (.setContent obj (fun (.getContent obj))))
 (defmethod swap-content!* javafx.scene.control.TitledPane [obj fun]
@@ -442,6 +475,13 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
   )
 
 (construct javafx.scene.control.ColorPicker [:color])
+(construct javafx.scene.control.TableColumn [:items])
+(construct javafx.scene.control.cell.PropertyValueFactory [:property])
+(construct javafx.scene.chart.AreaChart [:x-axis :y-axis :ser-list])
+(construct javafx.scene.chart.StackedAreaChart [:x-axis :y-axis :ser-list])
+(construct javafx.scene.chart.LineChart [:x-axis :y-axis :ser-list])
+(construct javafx.scene.chart.BarChart [:x-axis :y-axis :ser-list])
+(construct javafx.scene.chart.ScatterChart [:x-axis :y-axis :ser-list])
 (construct javafx.scene.layout.BackgroundImage [:image :repeat-x :repeat-y :position :size])
 (construct javafx.scene.layout.BorderImage [:image :widths :insets :slices :filled :repeat-x :repeat-y]) ;; TODO Wrapper for BorderWidths, BorderRepeat and Insets
 
@@ -461,7 +501,7 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
 ;; ## <a name="contentcreation"></a> Content creation
 (defn fx* [ctrl & args]
   (let [args# (if-not (and (nil? (first args)) (map? (first args))) (apply hash-map args) (first args))
-        {:keys [bind listen content children]} args#
+        {:keys [bind listen content children style-classes]} args#
         props# bind
         listeners# listen
         content# (if (or (seq? content) (seq? children))
@@ -482,7 +522,8 @@ Don't use this yourself; See the macros \"fx\" and \"deffx\" below.
              (if (or (not (nil? content#))
                     (and (seq? content#) (not (empty? content#))))
                (swap-content!* obj# (fn [_] content#)))
-             obj#)))
+             (if style-classes (.addAll (.getStyleClass obj#) (list->observable style-classes)))
+                obj#)))
 
 (defmacro fx "
 The central macro of ClojureFX. This takes the name of a node as declared in the pkgs atom and
