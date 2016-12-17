@@ -1,18 +1,15 @@
-(ns clojurefx.factory
-  (:refer-clojure :exclude [atom doseq let fn defn ref dotimes defprotocol loop for send compile meta with-meta])
-  (:require [clojure.core.typed :refer :all]
-            [clojure.core.typed.unsafe :refer [ignore-with-unchecked-cast]]
-            [taoensso.timbre :as timbre]
+(ns clojurefx.factory 
+  (:require [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
             [clojurefx.clojurefx :as fx]
             [clojurefx.protocols :refer :all])
   (:import (javafx.scene Scene Node Parent)))
 
-(tc-ignore (timbre/refer-timbre))
+(timbre/refer-timbre)
 
 ;;## FXMLLoader
 
-(defn load-fxml [filename :- String] :- javafx.scene.Node
+(defn load-fxml [filename]
   (let [loader (new javafx.fxml.FXMLLoader)]
     (.setLocation loader (io/resource ""))
     (.load loader (-> filename io/resource io/input-stream))))
@@ -22,7 +19,6 @@
 (def getter first)
 (def setter second)
 
-(ann translation-map (Atom1 (Map Keyword (Vec clojure.lang.Var))))
 (def translation-map
   (atom {;;; FXValue
          :text (with-meta [#'value #'set-value!] {:argument String :parent FXValue})
@@ -49,7 +45,6 @@
   (atom {javafx.scene.Scene [:root]}))
 
 (declare compile-o-matic)
-(ann apply-props-to-node [Any (Map Keyword Any) -> Any])
 (defn apply-props-to-node [node props]
   (doseq [[k v] props]
     (let [translation (get @translation-map k)
@@ -65,7 +60,6 @@
       ((setter translation) node v)))
   node)
 
-(ann build-node [Any (Map Keyword Any) -> Any])
 (defn build-node [object props]
   (debug "build-node:" object props)
   (let [mandatory (get mandatory-constructor-args object)
@@ -87,7 +81,6 @@
 ;;     (string? thing) (recur (symbol thing))
 ;;     :else thing))
 
-(ann compile [(Vec Any) -> Any])
 (defn compile
   ([args] (compile args []))
   ([[obj & other] accu]
@@ -98,7 +91,6 @@
      (class? obj) (recur (rest other) (conj accu (build-node obj (first other))))
      :else (recur other (conj accu obj)))))
 
-(ann compile-o-matic [Any -> Any])
 (defn compile-o-matic [thing]
   (if (instance? java.util.List thing)
     (if (and (not (coll? (first thing))) (map? (second thing)))

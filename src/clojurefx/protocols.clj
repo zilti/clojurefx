@@ -1,101 +1,91 @@
-(ns clojurefx.protocols
-  (:refer-clojure :exclude [atom doseq let fn defn ref dotimes defprotocol loop for send meta with-meta])
-  (:require [clojure.core.typed :refer :all]))
+(ns clojurefx.protocols)
 
 ;;## Shadows
 
-(defprotocol [[A :variance :covariant]]
-  FXMeta
-  (meta [this :- A] :- (Map Any Any))
-  (with-meta [this :- A metadata :- (Map Any Any)] :- A))
+(defprotocol
+    FXMeta
+  (meta [this])
+  (with-meta [this metadata]))
 
 ;;## Standard
 
-(declare-protocols FXValue FXId FXParent)
-(defprotocol [[A :variance :covariant]
-              [B :variance :covariant]]
-  FXValue
-  (value [this :- A] :- B)
-  (set-value! [this :- A value :- B] :- A))
+;; (declare-protocols FXValue FXId FXParent)
+(defprotocol
+    FXValue
+  (value [this])
+  (set-value! [this value]))
 
-(defprotocol [[A :variance :covariant]
-              [x :variance :covariant]]
-  FXId
-  (id [this :- A] :- (U nil String))
-  (set-id! [this :- A id :- String] :- A))
+(defprotocol
+    FXId
+  (id [this])
+  (set-id! [this id]))
 
-(defalias FXElement (U FXValue FXId))
+;; (defalias FXElement (U FXValue FXId))
 
-(defprotocol [[A :variance :covariant]
-              [B :variance :covariant :< Seqable]]
-  FXParent
+(defprotocol
+    FXParent
   "The ClojureFX extension to javafx.scene.Parent."
-  (subnodes [this :- A] :- B)
-  (set-subnodes! [this :- A nodes :- B] :- A))
+  (subnodes [this])
+  (set-subnodes! [this nodes]))
 
-(defprotocol [[A :variance :covariant]
-              [B :variance :covariant]]
-  FXContainer
-  (content [this :- A] :- B)
-  (set-content! [this :- A node :- B] :- A))
+(defprotocol
+    FXContainer
+  (content [this])
+  (set-content! [this node]))
 
-(defprotocol [[A :variance :covariant]
-              [B :variance :covariant :< javafx.scene.Node]]
-  FXGraphic
-  (graphic [this :- A] :- B)
-  (set-graphic! [this :- A graphic :- B] :- A))
+(defprotocol
+    FXGraphic
+  (graphic [this])
+  (set-graphic! [this graphic]))
 
-(defprotocol [[A :variance :covariant :< javafx.css.Styleable]
-              [B :variance :covariant :< javafx.css.Styleable]]
-  FXStyleable
+(defprotocol
+    FXStyleable
   "http://download.java.net/jdk8/jfxdocs/javafx/css/Styleable.html"
-  (css-meta [this :- A] :- (java.util.List javafx.css.CssMetaData)) ;; TODO
-  (pseudo-class-styles [this :- A] :- (javafx.collections.ObservableSet javafx.css.PseudoClass))
-  (style [this :- A] :- String)
-  (style-classes [this :- A] :- (javafx.collections.ObservableList String))
-  (set-style-classes! [this :- A classes :- java.util.Collection] :- A)
-  (styleable-parent [this :- A] :- (U nil B))
-  (type-selector [this :- A] :- String))
+  (css-meta [this]) ;; TODO
+  (pseudo-class-styles [this])
+  (style [this])
+  (style-classes [this])
+  (set-style-classes! [this classes])
+  (styleable-parent [this])
+  (type-selector [this]))
 
-(defprotocol [[A :variance :covariant]]
-  FXStyleSetter
-  (set-style! [this :- A style :- String] :- A))
+(defprotocol
+    FXStyleSetter
+  (set-style! [this style]))
 
-(defalias FXStyled (U FXStyleable FXStyleSetter))
+;; (defalias FXStyled (U FXStyleable FXStyleSetter))
 
-(defprotocol [[A :variance :covariant]]
-  FXOnAction
-  (action [this :- A] :- [javafx.event.EventHandler -> Any])
-  (set-action! [this :- A action :- [javafx.event.EventHandler -> Any]] :- A)
-  (fire! [this :- A] :- nil))
+(defprotocol
+    FXOnAction
+  (action [this])
+  (set-action! [this action])
+  (fire! [this]))
 
 ;;## Special Types
 
 ;;### javafx.event
 
-(defprotocol [[A :variance :covariant :< javafx.event.Event]]
-  FXEvent
-  (source [this :- A] :- Any)
-  (consume! [this :- A] :- A)
-  (copy [this :- A newSource :- Object newTarget :- javafx.event.EventTarget] :- A)
-  (event-type [this :- A] :- javafx.event.EventType)
-  (target [this :- A] :- javafx.event.EventTarget)
-  (consumed? [this :- A] :- Boolean))
+(defprotocol
+    FXEvent
+  (source [this])
+  (consume! [this])
+  (copy [this newSource newTarget])
+  (event-type [this])
+  (target [this])
+  (consumed? [this]))
 
 ;;### javafx.stage
 
-(defprotocol [[A :variance :covariant :< javafx.stage.Stage]
-              [B :variance :covariant :< javafx.scene.Scene]]
-  FXStage
-  (title [this :- A] :- String)
-  (set-title! [this :- A title :- String] :- A)
-  (scene [this :- A] :- B)
-  (set-scene! [this :- A scene :- B] :- A))
+(defprotocol
+    FXStage
+  (title [this])
+  (set-title! [this title])
+  (scene [this])
+  (set-scene! [this scene]))
 
 ;;### javafx.scene
 
-(defprotocol [[A :variance :covariant :< javafx.scene.Scene]
-              [B :variance :covariant :< javafx.scene.Parent]]
-  FXScene
-  (root [this :- A] :- B)
-  (set-root! [this :- A root :- B] :- A))
+(defprotocol
+    FXScene
+  (root [this])
+  (set-root! [this root]))
