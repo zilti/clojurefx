@@ -2,40 +2,41 @@
   (:require [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
             [clojure.zip :as zip]
-            [clojurefx.protocols :as p]
-            [clojure.java.io :refer :all])
-  (:import (clojurefx AppWrap)))
+            [clojurefx.protocols :as p]))
+
+;; Fuck you, whoever made that API design.
+(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
+
+(timbre/refer-timbre)
+
+(import '(clojurefx AppWrap)
+        '(javafx.scene.control Labeled Label TextField TextArea CheckBox ComboBox Menu MenuItem MenuBar
+                               MenuButton ContextMenu ToolBar SplitPane ScrollPane Accordion
+                               TitledPane TabPane Tab TableColumnBase Labeled ButtonBase)
+        '(javafx.scene Node Scene Parent)
+        '(javafx.scene.layout Pane VBox)
+        '(javafx.stage Stage)
+        '(javafx.collections FXCollections ObservableList)
+        '(javafx.css Styleable)
+        '(javafx.event Event ActionEvent EventTarget)
+        '(java.util Collection))
 
 (defn gen-stage! [nspc fun]
   (let [appwrap (AppWrap. nspc fun)]
-    (.launch appwrap)))
+    (.launch appwrap nil)))
 
 ;; ## Threading helpers
 
-(defn run-later*"
-  Simple wrapper for Platform/runLater. You should use run-later.
-  " [f]
-  (assert (instance? Runnable f))
-  (javafx.application.Platform/runLater f)
-  nil)
+(defmacro run-later "Simple wrapper for Platform/runLater." [& body]
+  `(javafx.application.Platform/runLater (fn [] ~@body)))
 
-(defmacro run-later [& body]
-  `(run-later* (fn [] ~@body)))
-
-(defn run-now* "
-  A modification of run-later waiting for the running method to return. You should use run-now.
-  " [f]
-  (if (javafx.application.Platform/isFxApplicationThread)
-    (apply f [])
-    (let [result (promise)]
-      (run-later
-       (deliver result (try (f) (catch Throwable e e))))
-      @result)))
-
-(defmacro run-now "
-  Runs the code on the FX application thread and waits until the return value is delivered.
-  " [& body]
-  `(run-now* (fn [] ~@body)))
+(defmacro run-now "Runs the code on the FX application thread and waits until the return value is delivered."
+  [& body]
+  `(if (javafx.application.Platform/isFxApplicationThread)
+     (apply (fn [] ~@body) [])
+     (let [result (promise)]
+       (run-later (deliver result (try (fn [] ~@body) (catch Throwable e e))))
+       @result)))
 
 (defn collize "
   Turns the input into a collection, if it isn't already.
@@ -43,19 +44,6 @@
   (if (coll? input)
     input
     (list input)))
-
-(timbre/refer-timbre)
-
-(import (javafx.scene.control Labeled Label TextField TextArea CheckBox ComboBox Menu MenuItem MenuBar
-                              MenuButton ContextMenu ToolBar SplitPane ScrollPane Accordion
-                              TitledPane TabPane Tab TableColumnBase Labeled ButtonBase)
-        (javafx.scene Node Scene Parent)
-        (javafx.scene.layout Pane VBox)
-        (javafx.stage Stage)
-        (javafx.collections FXCollections ObservableList)
-        (javafx.css Styleable)
-        (javafx.event Event ActionEvent EventTarget)
-        (java.util Collection))
 
 (defn pred-protocol [proto check]
   (let [impls (keys (proto :impls))

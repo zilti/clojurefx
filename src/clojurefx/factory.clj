@@ -53,10 +53,6 @@
       (trace "Key:" k " " (type k) "Value:" v " " (type v))
       (when (nil? translation)
         (throw (Exception. (str "Property" k "not available in translation map."))))
-      ;; (when-not ((pred-substitute argument) v)
-      ;;   (throw (Exception. (str "Input type" v "is not compatible with expected type for" k))))
-      ;; (when-not ((pred-substitute parent) node)
-      ;;   (throw (Exception. (str "Property" k "not available for class" (class node)))))
       ((setter translation) node v)))
   node)
 
@@ -72,14 +68,6 @@
          reverse
          eval)
      (apply dissoc props mandatory))))
-
-;; (ann resolv-o-matic [(U String Keyword Symbol Class) -> Class])
-;; (defn resolv-o-matic [thing]
-;;   (cond
-;;     (symbol? thing) (ns-resolve (the-ns 'clojurefx.clojurefx) thing)
-;;     (keyword? thing) (recur (name thing))
-;;     (string? thing) (recur (symbol thing))
-;;     :else thing))
 
 (defn compile
   ([args] (compile args []))

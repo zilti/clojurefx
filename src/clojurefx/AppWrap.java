@@ -10,7 +10,7 @@ import javafx.stage.Stage;
  */
 public class AppWrap extends Application {
 
-    String ns, fn;
+    private String ns, fn;
 
     public AppWrap(String ns, String fn) {
         super();
