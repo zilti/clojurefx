@@ -9,8 +9,6 @@
 [clojurefx "0.0.16"]
 ```
 
-**Note: This project is still maintained. Miss a feature, found a bug? Open a ticket, and I'll fix and improve it.**
-
 A Clojure extension to make working with [JavaFX](http://download.java.net/jdk8/jfxdocs/index.html) simpler and more idiomatic. It allows you to naturally work with stock JavaFX components through use of extended protocols. Should a feature be missing you can easily extend ClojureFX in your own codebase or just fall back to standard JavaFX methods.
 
 ## Features
