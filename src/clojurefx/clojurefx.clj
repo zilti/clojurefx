@@ -1,11 +1,14 @@
-1(ns clojurefx.clojurefx 
-   (:require [taoensso.timbre :as timbre]
-             [clojure.java.io :as io]
-             [clojure.zip :as zip]
-             [clojurefx.protocols :as p]
-             [clojure.java.io :refer :all]))
+(ns clojurefx.clojurefx
+  (:require [taoensso.timbre :as timbre]
+            [clojure.java.io :as io]
+            [clojure.zip :as zip]
+            [clojurefx.protocols :as p]
+            [clojure.java.io :refer :all])
+  (:import (clojurefx AppWrap)))
 
-(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
+(defn gen-stage! [nspc fun]
+  (let [appwrap (AppWrap. nspc fun)]
+    (.launch appwrap)))
 
 ;; ## Threading helpers
 
