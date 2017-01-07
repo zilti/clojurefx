@@ -1,12 +1,12 @@
 [![License](//img.shields.io/badge/license-LGPL-blue.svg?style=flat)](https://www.gnu.org/licenses/lgpl-3.0.en.html#content)
-[![Clojars](//img.shields.io/badge/clojars-0.1.0--SNAPSHOT-blue.svg?style=flat)](https://clojars.org/clojurefx/versions/0.1.0-SNAPSHOT)
+[![Clojars](//img.shields.io/badge/clojars-0.0.16-blue.svg?style=flat)](https://clojars.org/clojurefx/versions/0.0.16)
 [![Gratipay](//img.shields.io/gratipay/zilti.svg?style=flat)](//gratipay.com/zilti)
 [![Flattr this](//api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=zilti&url=https%3A%2F%2Fbitbucket.org%2Fzilti%2Fclojurefx)
 
 # ClojureFX
 
 ```clojure
-[clojurefx "0.1.0-SNAPSHOT"]
+[clojurefx "0.0.16"]
 ```
 
 **Note: This project is still maintained. Miss a feature, found a bug? Open a ticket, and I'll fix and improve it.**
