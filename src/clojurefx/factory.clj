@@ -1,10 +1,12 @@
 (ns clojurefx.factory 
   (:require [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
+            [clojure.reflect :as reflect]
             [clojurefx.clojurefx :as fx]
             [clojurefx.protocols :refer :all])
   (:import (javafx.scene Scene Node Parent)
-           (javafx.scene.layout Region)))
+           (javafx.scene.layout Region)
+           (clojure.reflect Constructor)))
 
 (timbre/refer-timbre)
 
@@ -60,8 +62,17 @@
          }))
 
 (def constructor-args
-  (atom {javafx.scene.Scene [:root]
-         javafx.stage.Stage [:style]}))
+  (atom {javafx.scene.Scene [(with-meta :root {:type javafx.scene.Parent})]
+         javafx.stage.Stage [(with-meta :style {:type javafx.stage.StageStyle})]}))
+
+(defn find-constructor [clazz cargs]
+  (->> (reflect/reflect clazz)
+       (filter #(= Constructor (class %)))
+       (map :parameter-types)
+       (filter #(= cargs %))
+       first))
+
+
 
 (declare compile-o-matic)
 (defn apply-props-to-node [node props]
