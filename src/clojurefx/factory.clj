@@ -3,7 +3,8 @@
             [clojure.java.io :as io]
             [clojurefx.clojurefx :as fx]
             [clojurefx.protocols :refer :all])
-  (:import (javafx.scene Scene Node Parent)))
+  (:import (javafx.scene Scene Node Parent)
+           (javafx.scene.layout Region)))
 
 (timbre/refer-timbre)
 
@@ -21,53 +22,77 @@
 
 (def translation-map
   (atom {;;; FXValue
-         :text (with-meta [#'value #'set-value!] {:argument String :parent FXValue})
-         :value (with-meta [#'value #'set-value!] {:argument Object :parent FXValue})
+         :text        (with-meta [#'value #'set-value!] {:argument String :parent FXValue})
+         :value       (with-meta [#'value #'set-value!] {:argument Object :parent FXValue})
          ;;; FXId
-         :id (with-meta [#'id #'set-id!] {:argument String :parent FXId})
+         :id          (with-meta [#'id #'set-id!] {:argument String :parent FXId})
          ;;; FXGraphic
-         :graphic (with-meta [#'graphic #'set-graphic!] {:argument Node :parent FXGraphic})
+         :graphic     (with-meta [#'graphic #'set-graphic!] {:argument Node :parent FXGraphic})
          ;;; FXContainer
-         :content (with-meta [#'content #'set-content!] {:argument Node :parent FXContainer})
+         :content     (with-meta [#'content #'set-content!] {:argument Node :parent FXContainer})
          ;;; FXParent
-         :children (with-meta [#'subnodes #'set-subnodes!] {:argument java.util.List :parent FXParent})
+         :children    (with-meta [#'subnodes #'set-subnodes!] {:argument java.util.List :parent FXParent})
+         ;;; FXRegion
+         ;;         :width       (with-meta [#'width] {:argument Region :parent FXRegion})
+         :min-width   (with-meta [#'min-width #'set-min-width!] {:argument Region :parent FXRegion})
+         :max-width   (with-meta [#'max-width #'set-max-width!] {:argument Region :parent FXRegion})
+         :pref-width  (with-meta [#'pref-width #'set-pref-width!] {:argument Region :parent FXRegion})
+         ;;         :height      (with-meta [#'height] {:argument Region :parent FXRegion})
+         :min-height  (with-meta [#'min-height #'set-min-height!] {:argument Region :parent FXRegion})
+         :max-height  (with-meta [#'max-height #'set-max-height!] {:argument Region :parent FXRegion})
+         :pref-height (with-meta [#'pref-height #'set-pref-height!] {:argument Region :parent FXRegion})
          ;;; FXStyleSetter / FXStyleable
-         :style (with-meta [#'style #'set-style!] {:argument String :parent FXStyleable})
+         :style       (with-meta [#'style #'set-style!] {:argument String :parent FXStyleable})
          ;;; FXOnAction
-         :action (with-meta [#'action #'set-action!] {:argument clojure.lang.IFn :parent FXOnAction})
+         :action      (with-meta [#'action #'set-action!] {:argument clojure.lang.IFn :parent FXOnAction})
          ;;; FXStage
-         :title (with-meta [#'title #'set-title!] {:argument String :parent FXStage})
-         :scene (with-meta [#'scene #'set-scene!] {:argument Scene :parent FXStage})
+         :title       (with-meta [#'title #'set-title!] {:argument String :parent FXStage})
+         :scene       (with-meta [#'scene #'set-scene!] {:argument Scene :parent FXStage})
          ;;; FXScene
-         :root (with-meta [#'root #'set-root!] {:argument Parent :parent FXScene})}))
+         :root        (with-meta [#'root #'set-root!] {:argument Parent :parent FXScene})
+         ;;; FXRectangle
+         :arc-height  (with-meta [#'arc-height #'set-arc-height!] {:argument Double :parent FXRectangle})
+         :arc-width   (with-meta [#'arc-width #'set-arc-width!] {:argument Double :parent FXRectangle})
+         :height      (with-meta [#'height #'set-width!] {:argument Double :parent FXRectangle})
+         :width       (with-meta [#'height #'set-height!] {:argument Double :parent FXRectangle})
+         :x           (with-meta [#'x #'set-x!] {:argument Double :parent FXRectangle})
+         :y           (with-meta [#'y #'set-y!] {:argument Double :parent FXRectangle})
+         }))
 
-(def mandatory-constructor-args
-  (atom {javafx.scene.Scene [:root]}))
+(def constructor-args
+  (atom {javafx.scene.Scene [:root]
+         javafx.stage.Stage [:style]}))
 
 (declare compile-o-matic)
 (defn apply-props-to-node [node props]
+  (debug "Applying" (count props) "properties to" node)
   (doseq [[k v] props]
     (let [translation (get @translation-map k)
           {:keys [argument parent]} (meta translation)
           v (compile-o-matic v)]
-      (trace "Key:" k " " (type k) "Value:" v " " (type v))
+      (debug "Key:" k "Value:" v " " (type v) "Translation:" translation)
       (when (nil? translation)
-        (throw (Exception. (str "Property" k "not available in translation map."))))
-      ((setter translation) node v)))
+        (error (str "Property" k "not available in translation map."))
+        ;;(throw (Exception. (str "Property" k "not available in translation map.")))
+        )
+      (try ((setter translation) node v)
+           (catch Exception e (error e)))))
+  (debug "Done applying properties for" node)
   node)
 
 (defn build-node [object props]
   (debug "build-node:" object props)
-  (let [mandatory (get mandatory-constructor-args object)
+  (let [cargs (get @constructor-args object)
         form `(~object new)]
+    (debug "Constructor args for" (class object) ":" cargs "->" props)
     (apply-props-to-node
-     (-> (reduce (fn [form mandatory]
-                   (if-let [entry (get props mandatory)]
-                     (cons entry form)
-                     form)) form mandatory)
-         reverse
-         eval)
-     (apply dissoc props mandatory))))
+      (->> (reduce (fn [form mandatory]
+                     (if-let [entry (compile-o-matic (get props mandatory))]
+                       (cons entry form)
+                       form)) form cargs)
+           reverse
+           eval)
+      (apply dissoc props cargs))))
 
 (defn compile
   ([args] (compile args []))

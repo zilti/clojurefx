@@ -29,6 +29,24 @@
   (set-subnodes! [this nodes]))
 
 (defprotocol
+  FXRegion
+  "The ClojureFX extension to javafx.scene.layout.Region."
+  (width [this])
+  (min-width [this])
+  (set-min-width! [this width])
+  (max-width [this])
+  (set-max-width! [this width])
+  (pref-width [this])
+  (set-pref-width! [this width])
+  (height [this])
+  (min-height [this])
+  (set-min-height! [this height])
+  (max-height [this])
+  (set-max-height! [this height])
+  (pref-height [this])
+  (set-pref-height! [this height]))
+
+(defprotocol
     FXContainer
   (content [this])
   (set-content! [this node]))
@@ -89,3 +107,22 @@
     FXScene
   (root [this])
   (set-root! [this root]))
+
+;;## Shapes
+
+;;### Rectangle
+
+(defprotocol
+  FXRectangle
+  (arc-height [this])
+  (set-arc-height! [this height])
+  (arc-width [this])
+  (set-arc-width! [this width])
+  (height [this])
+  (set-height! [this height])
+  (width [this])
+  (set-width! [this width])
+  (x [this])
+  (set-x! [this x])
+  (y [this])
+  (set-y! [this y]))

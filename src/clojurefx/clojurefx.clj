@@ -2,7 +2,9 @@
   (:require [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
             [clojure.zip :as zip]
-            [clojurefx.protocols :as p]))
+            [clojurefx.protocols :as p])
+  (:import (javafx.scene.layout Region)
+           (javafx.scene.shape Rectangle)))
 
 ;; Fuck you, whoever made that API design.
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
@@ -27,16 +29,30 @@
 
 ;; ## Threading helpers
 
-(defmacro run-later "Simple wrapper for Platform/runLater." [& body]
-  `(javafx.application.Platform/runLater (fn [] ~@body)))
+(defn run-later*"
+  Simple wrapper for Platform/runLater. You should use run-later.
+  " [f]
+  (assert (instance? Runnable f))
+  (javafx.application.Platform/runLater f)
+  nil)
 
-(defmacro run-now "Runs the code on the FX application thread and waits until the return value is delivered."
-  [& body]
-  `(if (javafx.application.Platform/isFxApplicationThread)
-     (apply (fn [] ~@body) [])
-     (let [result (promise)]
-       (run-later (deliver result (try (fn [] ~@body) (catch Throwable e e))))
-       @result)))
+(defmacro run-later [& body]
+  `(run-later* (fn [] ~@body)))
+
+(defn run-now* "
+  A modification of run-later waiting for the running method to return. You should use run-now.
+  " [f]
+  (if (javafx.application.Platform/isFxApplicationThread)
+    (apply f [])
+    (let [result (promise)]
+      (run-later
+        (deliver result (try (f) (catch Throwable e e))))
+      @result)))
+
+(defmacro run-now "
+  Runs the code on the FX application thread and waits until the return value is delivered.
+  " [& body]
+  `(run-now* (fn [] ~@body)))
 
 (defn collize "
   Turns the input into a collection, if it isn't already.
@@ -130,6 +146,23 @@
   (subnodes [this] (.getPanes ^Accordion this))
   (set-subnodes! [this nodes] (.setAll ^ObservableList (.getPanes ^Accordion this) (collize nodes)) this))
 
+(extend-protocol p/FXRegion
+  Region
+  (width [this] (.getWidth ^Region this))
+  (min-width [this] (.getMinWidth ^Region this))
+  (set-min-width! [this width] (.setMinWidth ^Region this ^double width))
+  (max-width [this] (.getMaxWidth ^Region this))
+  (set-max-width! [this width] (.setMaxWidth ^Region this ^double width))
+  (pref-width [this] (.getPrefWidth ^Region this))
+  (set-pref-width! [this width] (.setPrefWidth ^Region this ^double width))
+  (height [this] (.getHeight ^Region this))
+  (min-height [this] (.getMinHeight ^Region this))
+  (set-min-height [this height] (.setMinHeight ^Region this ^double height))
+  (max-height [this] (.getMaxHeight ^Region this))
+  (set-max-height [this height] (.setMaxHeight ^Region this ^double height))
+  (pref-height [this] (.getPrefHeight ^Region this))
+  (set-pref-height! [this height] (.setPrefHeight ^Region this ^double height)))
+
 (extend-protocol p/FXContainer
   Tab
   (content [this] (.getContent ^Tab this))
@@ -204,6 +237,25 @@
   p/FXScene
   (root [this] (.getRoot ^Scene this))
   (set-root! [this root] (.setRoot ^Scene this ^Parent root) this))
+
+;;## Shapes
+
+;;### Rectangle
+
+(extend-type Rectangle
+  p/FXRectangle
+  (arc-height [this] (.getArcHeight ^Rectangle this))
+  (set-arc-height! [this height] (.setArcHeight ^Rectangle this ^double height))
+  (arc-width [this] (.getArcWidth ^Rectangle this))
+  (set-arc-width! [this width] (.setArcWidth ^Rectangle this ^double width))
+  (height [this] (.getHeight ^Rectangle this))
+  (set-height! [this height] (.setHeight ^Rectangle this ^double height))
+  (width [this] (.getWidth ^Rectangle this))
+  (set-width! [this width] (.setWidth ^Rectangle this ^double width))
+  (x [this] (.getX ^Rectangle this))
+  (set-x! [this x] (.setX ^Rectangle this ^double x))
+  (y [this] (.getY ^Rectangle this))
+  (set-y! [this y] (.setY ^Rectangle this ^double y)))
 
 ;;## Event handling helper
 (defn bind-event
