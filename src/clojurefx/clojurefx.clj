@@ -4,7 +4,6 @@
             [clojure.zip :as zip]
             [clojure.reflect :as reflect]
             [clojure.string :as str]
-            [clojurefx.protocols :as p]
             [swiss.arrows :refer :all])
   (:import (javafx.scene.layout Region)
            (javafx.scene.shape Rectangle)))

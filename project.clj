@@ -1,4 +1,4 @@
-(defproject clojurefx "0.0.21"
+(defproject clojurefx "0.0.22"
   :description "A Clojure wrapper for JavaFX."
   :license "Like Clojure."
   :url "https://www.bitbucket.org/zilti/clojurefx"
