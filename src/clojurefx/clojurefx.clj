@@ -33,7 +33,8 @@
          javafx.stage.Stage {:style javafx.stage.StageStyle}}))
 
 (defn camelcase [kebabcase]
-  )
+  (let [splitted (str/split kebabcase #"-")]
+    (reduce #(str %1 (str/capitalize %2)) (first splitted) (rest splitted))))
 
 ;; ## Threading helpers
 
@@ -96,7 +97,7 @@
 ;; ## Properties
 
 (defn find-property [obj prop]
-  (clojure.lang.Reflector/invokeInstanceMethod obj prop []))
+  (clojure.lang.Reflector/invokeInstanceMethod obj (str (camelcase prop) "Property") []))
 
 (defn get-property-value
   ([obj prop]

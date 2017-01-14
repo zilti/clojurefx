@@ -1,4 +1,7 @@
-(defproject clojurefx "0.0.20"
+(defproject clojurefx "0.0.21"
+  :description "A Clojure wrapper for JavaFX."
+  :license "Like Clojure."
+  :url "https://www.bitbucket.org/zilti/clojurefx"
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [swiss-arrows "1.0.0"]
                  [com.taoensso/timbre "4.7.4" :exclusions [com.taoensso/carmine]]
