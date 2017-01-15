@@ -9,7 +9,7 @@
            (javafx.scene.shape Rectangle)))
 
 ;; Fuck you, whoever made that API design.
-(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
+;; (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
 (timbre/refer-timbre)
 
@@ -32,8 +32,8 @@
          javafx.stage.Stage {:style javafx.stage.StageStyle}}))
 
 (defn camelcase [kebabcase]
-  (let [splitted (str/split kebabcase #"-")]
-    (reduce #(str %1 (str/capitalize %2)) (first splitted) (rest splitted))))
+  (let [splitted (str/split (name kebabcase) #"-")]
+    (reduce #(str %1 (str/capitalize %2)) "" splitted)))
 
 ;; ## Threading helpers
 
@@ -91,36 +91,44 @@
        first))
 
 (defn invoke-constructor [clazz args]
+  (info "Constructing" clazz "with" (first args))
   (clojure.lang.Reflector/invokeConstructor clazz (into-array args)))
 
 ;; ## Properties
 
 (defn find-property [obj prop]
-  (clojure.lang.Reflector/invokeInstanceMethod obj (str (camelcase prop) "Property") []))
+  (info obj prop)
+  (clojure.lang.Reflector/invokeInstanceMethod obj (str (camelcase prop) "Property") (into-array [])))
 
 (defn get-property-value
   ([obj prop]
-   (.getValue (find-property obj (name prop)))))
+   (clojure.lang.Reflector/invokeInstanceMethod obj (str "get" (camelcase prop)) (into-array []))))
 
 (defn set-property-value
   ([obj prop val]
-   (.setValue (find-property obj (name prop)) val)))
+   (info obj ": Setting property" prop "to" val)
+   (clojure.lang.Reflector/invokeInstanceMethod obj (str "set" (camelcase prop)) (into-array [val]))))
 
 ;; ## In-code scenegraph
 
 (declare compile-o-matic)
+
 (defn- apply-props-to-node [nodeobj propmap]
   (doseq [[k v] propmap]
-    (set-property-value nodeobj k v))
+    (case k
+      :children (.add (.getChildren nodeobj) (compile-o-matic v))
+      (set-property-value nodeobj k (compile-o-matic v))))
   nodeobj)
 
 (defn- propmap-splitter [clazz propmap]
-  (let [constructor-args (get @constructor-args clazz)] 
+  (let [constructor-args (keys (get @constructor-args clazz))]
+    (info "Constructor args for" clazz "are" constructor-args)
     [(map propmap constructor-args) (apply dissoc propmap constructor-args)]))
 
 (defn- build-node [clazz propmap]
   (let [[cargs props] (propmap-splitter clazz propmap)
-        nodeobj (invoke-constructor clazz cargs)]
+        nodeobj (invoke-constructor clazz (map compile-o-matic cargs))]
+    (info cargs " " props)
     (apply-props-to-node nodeobj props)
     nodeobj))
 
