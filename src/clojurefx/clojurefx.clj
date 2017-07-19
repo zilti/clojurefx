@@ -16,14 +16,19 @@
 
 (defmacro fi
   [interface args & code]
-  (let [interface-type (.getMapping *ns* interface)
+  (debug "interface:" interface) 
+  (let [iface-ref (reflect/type-reflect interface)
+        bogus (debug "iface-ref:" iface-ref)
+        methods (filter #(instance? clojure.reflect.Method %) (:members iface-ref))
+        bogus (debug "methods:" (pr-str methods))
+        method-sym (:name (first methods))]
+    (debug "method-sym:" method-sym)
 
-        methods        (-> (.getMethods interface-type)
-                           seq)
-        method-sym     (.getName (first methods))]
+    (when-not (= (count methods) 1) 
+      (throw (new Exception (str "can't take an interface with more then one method:" (pr-str methods)))))
 
-    (when-not (= (count methods) 1)
-      (throw (new Exception "can't take an interface with more then one method.")))
+    (debug (pr-str `(proxy [~interface] []
+                      (~method-sym ~args ~@code))))
     
     `(proxy [~interface] []
        (~method-sym ~args
@@ -57,14 +62,14 @@
 (defn by-id [root id] 
   (try
     (cond 
-      (not (instance? clojure.lang.IFn root)) (do (debug "Raw input confirmed. Starting.")
+      (not (instance? clojure.lang.IFn root)) (do (trace "Raw input confirmed. Starting.")
                                                   (by-id (sgzipper root) id)) 
-      (zip/end? root) (do (debug "Search ended without result.")
+      (zip/end? root) (do (trace "Search ended without result.")
                           nil)
       (nil? (zip/node root)) (by-id (zip/next root) id)
       (= id (.getId (zip/node root))) (do (debug "Found item:" (zip/node root))
                                           (zip/node root))
-      :else (do (info "id of" (zip/node root) "does not match, proceeding to" (zip/node (zip/next root)))
+      :else (do (trace "id of" (zip/node root) "does not match, proceeding to" (zip/node (zip/next root)))
                 (by-id (zip/next root) id)))
     (catch Exception e (error e))))
 
