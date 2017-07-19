@@ -8,22 +8,65 @@
   (:import (javafx.scene.layout Region)
            (javafx.scene.shape Rectangle)))
 
-;; Fuck you, whoever made that API design.
-;; (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
-
 (timbre/refer-timbre)
 
-;; (import '(clojurefx AppWrap)
-;;         '(javafx.scene.control Labeled Label TextField TextArea CheckBox ComboBox Menu MenuItem MenuBar
-;;                                MenuButton ContextMenu ToolBar SplitPane ScrollPane Accordion
-;;                                TitledPane TabPane Tab TableColumnBase Labeled ButtonBase)
-;;         '(javafx.scene Node Scene Parent)
-;;         '(javafx.scene.layout Pane VBox)
-;;         '(javafx.stage Stage)
-;;         '(javafx.collections FXCollections ObservableList)
-;;         '(javafx.css Styleable)
-;;         '(javafx.event Event ActionEvent EventTarget)
-;;         '(java.util Collection))
+(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
+
+;; ## Scenegraph
+
+(defmacro fi
+  [interface args & code]
+  (let [interface-type (.getMapping *ns* interface)
+
+        methods        (-> (.getMethods interface-type)
+                           seq)
+        method-sym     (.getName (first methods))]
+
+    (when-not (= (count methods) 1)
+      (throw (new Exception "can't take an interface with more then one method.")))
+    
+    `(proxy [~interface] []
+       (~method-sym ~args
+        ~@code))))
+
+(defn branch? [obj]
+  (or (instance? javafx.scene.Parent obj)
+      (instance? javafx.scene.control.MenuBar obj)
+      (instance? javafx.scene.control.Menu obj)))
+
+(defn make-node [node children]
+  nil)
+
+(defmulti down (fn [x] (class x)))
+(defmethod down javafx.scene.Parent [obj]
+  (.getChildren obj))
+(defmethod down javafx.scene.control.MenuBar [obj]
+  (.getMenus obj))
+(defmethod down javafx.scene.control.Menu [obj]
+  (.getItems obj))
+(defmethod down javafx.scene.control.Label [obj] 
+  [(.getGraphic obj)])
+(defmethod down javafx.scene.control.ProgressIndicator [obj]
+  [(.getContextMenu obj)])
+(defmethod down :default [obj]
+  nil)
+
+(defn sgzipper [root]
+  (zip/zipper branch? down make-node root))
+
+(defn by-id [root id] 
+  (try
+    (cond 
+      (not (instance? clojure.lang.IFn root)) (do (debug "Raw input confirmed. Starting.")
+                                                  (by-id (sgzipper root) id)) 
+      (zip/end? root) (do (debug "Search ended without result.")
+                          nil)
+      (nil? (zip/node root)) (by-id (zip/next root) id)
+      (= id (.getId (zip/node root))) (do (debug "Found item:" (zip/node root))
+                                          (zip/node root))
+      :else (do (info "id of" (zip/node root) "does not match, proceeding to" (zip/node (zip/next root)))
+                (by-id (zip/next root) id)))
+    (catch Exception e (error e))))
 
 ;; ## Data
 
