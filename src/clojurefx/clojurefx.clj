@@ -35,26 +35,23 @@
         ~@code))))
 
 (defn branch? [obj]
-  (or (instance? javafx.scene.Parent obj)
+  (or (and (instance? javafx.scene.Parent obj)
+           (not (instance? org.controlsfx.control.StatusBar obj)))
       (instance? javafx.scene.control.MenuBar obj)
       (instance? javafx.scene.control.Menu obj)))
 
 (defn make-node [node children]
   nil)
 
-(defmulti down (fn [x] (class x)))
-(defmethod down javafx.scene.Parent [obj]
-  (.getChildren obj))
-(defmethod down javafx.scene.control.MenuBar [obj]
-  (.getMenus obj))
-(defmethod down javafx.scene.control.Menu [obj]
-  (.getItems obj))
-(defmethod down javafx.scene.control.Label [obj] 
-  [(.getGraphic obj)])
-(defmethod down javafx.scene.control.ProgressIndicator [obj]
-  [(.getContextMenu obj)])
-(defmethod down :default [obj]
-  nil)
+(defn down [x]
+  (cond
+    (instance? javafx.scene.control.Label x) (.getGraphic x)
+    (instance? javafx.scene.control.ProgressIndicator x) (.getContextMenu x)
+    (instance? javafx.scene.control.ScrollPane x) (.getContent x)
+    (instance? javafx.scene.control.MenuBar x) (.getMenus x)
+    (instance? javafx.scene.control.Menu x) (.getItems x)
+    (instance? javafx.scene.Parent x) (.getChildren x)
+    :else nil))
 
 (defn sgzipper [root]
   (zip/zipper branch? down make-node root))
