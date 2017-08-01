@@ -10,7 +10,7 @@
 
 (timbre/refer-timbre)
 
-(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
+;; (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
 ;; ## Scenegraph
 
@@ -25,7 +25,7 @@
     (debug "method-sym:" method-sym)
 
     (when-not (= (count methods) 1) 
-      (throw (new Exception (str "can't take an interface with more then one method:" (pr-str methods)))))
+      (throw (new Exception (str "can't take an interface with more than one method:" (pr-str methods)))))
 
     (debug (pr-str `(proxy [~interface] []
                       (~method-sym ~args ~@code))))
@@ -34,41 +34,46 @@
        (~method-sym ~args
         ~@code))))
 
-(defn branch? [obj]
-  (or (and (instance? javafx.scene.Parent obj)
-           (not (instance? org.controlsfx.control.StatusBar obj)))
-      (instance? javafx.scene.control.MenuBar obj)
-      (instance? javafx.scene.control.Menu obj)))
+(defmacro handle [obj prop fun]
+  (let [argument (->> fun (drop 1) first)
+        code (drop 2 fun)]
+    `(.setValue (~(symbol (str (name obj) "/" (name prop)))) (fi javafx.event.ActionEvent ~argument ~@code))))
 
-(defn make-node [node children]
-  nil)
+;; (defn branch? [obj]
+;;   (or (and (instance? javafx.scene.Parent obj)
+;;            (not (instance? org.controlsfx.control.StatusBar obj)))
+;;       (instance? javafx.scene.control.MenuBar obj)
+;;       (instance? javafx.scene.control.Menu obj)))
 
-(defn down [x]
-  (cond
-    (instance? javafx.scene.control.Label x) (.getGraphic x)
-    (instance? javafx.scene.control.ProgressIndicator x) (.getContextMenu x)
-    (instance? javafx.scene.control.ScrollPane x) (.getContent x)
-    (instance? javafx.scene.control.MenuBar x) (.getMenus x)
-    (instance? javafx.scene.control.Menu x) (.getItems x)
-    (instance? javafx.scene.Parent x) (.getChildren x)
-    :else nil))
+;; (defn make-node [node children]
+;;   nil)
 
-(defn sgzipper [root]
-  (zip/zipper branch? down make-node root))
+;; (defn down [x]
+;;   (cond
+;;     (instance? javafx.scene.control.Label x) (.getGraphic x)
+;;     (instance? javafx.scene.control.ProgressIndicator x) (.getContextMenu x)
+;;     (instance? javafx.scene.control.ScrollPane x) (.getContent x)
+;;     (instance? javafx.scene.control.MenuBar x) (.getMenus x)
+;;     (instance? javafx.scene.control.Menu x) (.getItems x)
+;;     (instance? javafx.scene.Parent x) (.getChildren x)
+;;     :else nil))
 
-(defn by-id [root id] 
-  (try
-    (cond 
-      (not (instance? clojure.lang.IFn root)) (do (trace "Raw input confirmed. Starting.")
-                                                  (by-id (sgzipper root) id)) 
-      (zip/end? root) (do (trace "Search ended without result.")
-                          nil)
-      (nil? (zip/node root)) (by-id (zip/next root) id)
-      (= id (.getId (zip/node root))) (do (debug "Found item:" (zip/node root))
-                                          (zip/node root))
-      :else (do (trace "id of" (zip/node root) "does not match, proceeding to" (zip/node (zip/next root)))
-                (by-id (zip/next root) id)))
-    (catch Exception e (error e))))
+;; (defn sgzipper [root]
+;;   (zip/zipper branch? down make-node root))
+
+;; (defn by-id [root id] 
+;;   (try
+;;     (cond 
+;;       (not (instance? clojure.lang.IFn root)) (do (trace "Raw input confirmed. Starting.")
+;;                                                   (by-id (sgzipper root) id)) 
+;;       (zip/end? root) (do (trace "Search ended without result.")
+;;                           nil)
+;;       (nil? (zip/node root)) (by-id (zip/next root) id)
+;;       (= id (.getId (zip/node root))) (do (debug "Found item:" (zip/node root))
+;;                                           (zip/node root))
+;;       :else (do (trace "id of" (zip/node root) "does not match, proceeding to" (zip/node (zip/next root)))
+;;                 (by-id (zip/next root) id)))
+;;     (catch Exception e (error e))))
 
 ;; ## Data
 
@@ -118,13 +123,6 @@
   (let [impls (keys (proto :impls))
         check (type check)]
     (reduce #(or %1 (isa? check %2)) false impls)))
-
-;; ## FXMLLoader
-
-(defn load-fxml [filename]
-  (let [loader (new javafx.fxml.FXMLLoader)]
-    (.setLocation loader (io/resource ""))
-    (.load loader (-> filename io/resource io/input-stream))))
 
 ;; ## Constructors
 
