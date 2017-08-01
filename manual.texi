@@ -1,0 +1,176 @@
+\input texinfo
+@setfilename clojurefx
+@settitle ClojureFX Manual
+
+@copying
+This manual is for ClojureFX, version 0.3.0.
+
+Copyright @copyright{} 2017 Daniel Ziltener.
+@end copying
+
+@titlepage
+@title ClojureFX Manual
+@author Daniel Ziltener
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top ClojureFX
+
+This is the documentation to ClojureFX, version 0.3.0.
+@end ifnottex
+
+@menu
+* Installation and deployment:: adding ClojureFX and probably tools.jar to your build tool.
+* Getting started::             the little ceremony necessary to get a window ``up and running''.
+* Coding a scenegraph::         for everyone who wants to write an UI the old-school way.
+* FXML and controllers::        loading FXML files and generating a controller.
+* Event handling::              a short chapter about handling events.
+* Index::.
+@end menu
+
+@node Installation and deployment
+@chapter Installation and deployment
+
+The first, straightforward part of this is to add the dependency to your @file{project.clj} or @file{build.boot}, which consists simply of adding @code{[clojurefx "0.3.0"]}.
+
+In case you are planning to use the FXML controller generator (and in my opinion, you really should!), you have to add @file{tools.jar} to your classpath. For Leiningen, there is a @uref{https://github.com/pallet/lein-jdk-tools, plugin}. The gist of it is to add @file{$JAVA_HOME/../lib/tools.jar} to your @code{:resource-paths} and if possible put it into an exclusions list for the main jar; that way it will still be packed into the uberjar.
+
+For the users of @emph{OpenJDK} 7 and 8, @emph{OpenJFX}, the opensource implementation of JavaFX, is not included yet (it will be starting with OpenJDK 9). Luckily, many Linux distributions ship a separate OpenJFX package by now, but for those that don't, the OpenJDK wiki has an article @uref{https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX, ``Building OpenJFX''}.
+
+@node Getting started
+@chapter Getting started
+
+@code{(require '[clojurefx.clojurefx :as fx])}
+
+To get the JavaFX environment up and running, you can't just initialize some classes and fire up a window, as is the case with Swing; you first have to initialise the environment. For this, you have two choices: either use a ``nasty hack'' Oracle themselves show, or go down the Java road and subclass @indicateurl{javafx.application.Application}.
+
+For the ``nasty hack'', you have to add a @code{defonce} @emph{before} you import JavaFX classes (so, best suited for a @file{core.clj} ns). You can then manually create a @code{Stage} and add a @code{Scene} to it.
+
+@code{(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))}
+
+Subclassing @indicateurl{javafx.application.Application} is a tad more work and requires you to aot-compile the namespace:
+
+@lisp
+(ns example.core
+  (:require [clojurefx.clojurefx :as fx])
+  (:gen-class :main true
+              :extends javafx.application.Application))
+
+(defn -init [this]
+  nil)
+
+(defn -start [this ^javafx.stage.Stage stage]
+  (.show stage))
+
+(defn -stop [this]
+  nil)
+
+(defn -main [& args]
+    (javafx.application.Application/launch example.core args))
+@end lisp
+
+@node Core API
+@section Core API
+
+@deffn clojurefx.clojurefx run-now code
+This macro runs the code given on the JavaFX thread and blocks the current thread until the execution has finished.
+@end deffn
+
+@deffn clojurefx.clojurefx run-later code
+This macro runs the code given on the JavaFX thread and immediately returns. Prefixing the s-exp with an @@ has the same effect as using @code{run-now}.
+@end deffn
+
+@node Coding a scenegraph
+@chapter Coding a scenegraph
+
+@strong{This part of the library has not been tested for a long time; I will get to it eventually, but expect things to be somewhat broken.}
+
+@lisp
+(require '[clojurefx.clojure :refer [compile]])
+(compile [VBox @{:id "TopLevelVBox"
+                :children [Label @{:text "Hi!"@}
+                           Label @{:text "I'm ClojureFX!"@}
+                           HBox @{:id "HorizontalBox"
+                                 :children [Button @{:text "Alright."@}]@}]@}])
+@end lisp
+
+@node Scenegraph API
+@section API
+
+@deffn clojurefx.clojurefx compile code
+Turns the Hiccup-like tree into a JavaFX-Node.
+@end deffn
+
+@node FXML and controllers
+@chapter FXML and controllers
+
+@code{(require '[clojurefx.fxml :as fxml])}
+
+@acronym{FXML} is an @acronym{XML} format describing a JavaFX user interface. It also allows defining action handlers and, similar to HTML, inline scripting via script tags. You can find an introduction @uref{https://docs.oracle.com/javase/8/javafx/api/javafx/fxml/doc-files/introduction_to_fxml.html, on this site}.
+
+ClojureFX provides an idiomatic interface to load FXML files, and in this new version can even generate a controller class for you at runtime. For the latter, the user has to have @file{tools.jar} on his classpath (@pxref{Installation and deployment}).
+
+@node Loading FXML files
+@section Loading FXML files
+
+So you created an @acronym{FXML} file, probably with the SceneBuilder, and obviously now want to use it in your application. Doing so looks tedious in the JavaFX docs, but it is actually straightforward. All you need is some place to add the loaded Node - this could be the Scene object, or simply any JavaFX Parent element. The loader function returns a pure javafx.scene.Node-based object.
+
+@lisp
+(require '[clojurefx.fxml :as fxml])
+(def mainwindow (fxml/load-fxml "resources/fxml/mainwindow.fxml")) ;; => javafx.scene.Node
+(.setContent my-scroll-pane mainwindow)
+@end lisp
+
+You're already good to go!
+
+@node Generating controller classes
+@section Generating controller classes
+
+When creating an @acronym{FXML} file, you have built-in features to bind properties and call functions in an associated controller class. Before actually writing any Clojure, let's see how you can prepare your @acronym{FXML} file to get the most out of it.
+
+First, at your outermost element in the file, you have to tell it the class name of its @acronym{JVM} sibling it is going to call. For that, open it, and add the @option{fx:controller} attribute: @code{fx:controller="ch.lyrion.MyController"}. It is not very important how you name the class, as long as it has a package and doesn't exist anywhere else.
+
+To bind any element to your new controller (in the form of a @code{Property}), you need the @option{fx:id} attribute. Let's try it with that label: @code{<Label fx:id="MyLabel" />}. That way, you'll always have access to it as long as you have the controller instance with you. Note that the CamelCase will be automatically converted to kebab-case when using the designated accessors from ClojureFX!
+
+Next, you can define action handlers. Note that ``@emph{Special Handlers}'' (@uref{https://docs.oracle.com/javase/8/javafx/api/javafx/fxml/doc-files/introduction_to_fxml.html#collections_and_property_handlers, as defined here}) are not yet fully supported; they should work though. If not, let me know! You simply provide the attribute, e.g. an @option{onAction} attribute, with the method name prefixed with a pound sign; note that the method name CamelCase will be automatically converted to kebab-case. E.g. @code{<Button onAction="#buttonClicked" />} will call @code{(button-clicked event)} in the namespace you provided (see below).
+
+Now, finally, it's time to weld the parts together. But wait! Your @acronym{FXML} file doesn't have any companion, no controller class, let alone the @code{ch.lyrion.MyController} we told it to look for!
+No worries, we got you covered. @ref{load-fxml-with-controller} has your and your file's back. It doesn't just load the @acronym{FXML} and returns a @code{Node}, it also parses the source and generates your file's companion on the fly. For that, it needs a couple more infos than @code{load-fxml} though: first, of course, the file path, but also the fully qualified clojure function in @code{String} form that will be called when the class gets initialized by JavaFX. Note that all action handlers defined above also have to be in the namespace of that function.
+
+@node FXML scripting
+@section FXML scripting
+
+Unfortunately, FXML scripting is currently broken (outdated JSR-223 implementation). Stay tuned!
+
+@node FXML API
+@section API
+
+@anchor{load-fxml}
+@deffn clojurefx.fxml load-fxml filename
+With this command, ClojureFX loads an FXML file and returns it as a @uref{https://docs.oracle.com/javase/8/javafx/api/javafx/scene/Node.html, javafx.scene.Node}. Note that the filename will be parsed by @code{clojure.io/resource} before loading.
+@end deffn
+
+@anchor{load-fxml-with-controller}
+@deffn clojurefx.fxml load-fxml-with-controller filename clazz init-fn
+Like @ref{load-fxml}, but also generates and loads an accompanying controller class.
+@end deffn
+
+@node Event handling
+@chapter Event handling
+
+@strong{Coming soon.}
+
+@node Index
+@unnumbered Index
+
+@printindex fn
+
+@bye
