@@ -13,11 +13,11 @@ A Clojure extension to make working with [JavaFX](http://download.java.net/jdk8/
 
 ## Features
 
-This is in a very early state, so there isn't much yet. Take a look at the [ClojureFX manual](http://lyrion.ch/share/clojurefx.html).
+Take a look at the [ClojureFX manual](http://lyrion.ch/share/clojurefx.html).
 
-* Declarative EDN GUI structure compilation
 * FXML loading and scripting
 * **NEW** Automatic FXML controller generation
+* Declarative EDN GUI structure compilation
 * Simplified event binding (bind a Clojure function to an event trigger)
 
 ### Declarative UI programming
