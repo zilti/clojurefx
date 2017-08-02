@@ -20,12 +20,12 @@ Copyright @copyright{} 2017 Daniel Ziltener.
 
 @contents
 
-@ifnottex
+@c@ifnottex
 @node Top
 @top ClojureFX
 
 This is the documentation to ClojureFX, version 0.3.0.
-@end ifnottex
+@c@end ifnottex
 
 @menu
 * Installation and deployment:: adding ClojureFX and probably tools.jar to your build tool.
@@ -33,6 +33,7 @@ This is the documentation to ClojureFX, version 0.3.0.
 * Coding a scenegraph::         for everyone who wants to write an UI the old-school way.
 * FXML and controllers::        loading FXML files and generating a controller.
 * Event handling::              a short chapter about handling events.
+* Roadmap::                     what's up next?.
 * Index::.
 @end menu
 
@@ -125,7 +126,8 @@ So you created an @acronym{FXML} file, probably with the SceneBuilder, and obvio
 
 @lisp
 (require '[clojurefx.fxml :as fxml])
-(def mainwindow (fxml/load-fxml "resources/fxml/mainwindow.fxml")) ;; => javafx.scene.Node
+(def mainwindow (fxml/load-fxml "resources/fxml/mainwindow.fxml"))
+     ;; => javafx.scene.Node
 (.setContent my-scroll-pane mainwindow)
 @end lisp
 
@@ -140,7 +142,7 @@ First, at your outermost element in the file, you have to tell it the class name
 
 To bind any element to your new controller (in the form of a @code{Property}), you need the @option{fx:id} attribute. Let's try it with that label: @code{<Label fx:id="MyLabel" />}. That way, you'll always have access to it as long as you have the controller instance with you. Note that the CamelCase will be automatically converted to kebab-case when using the designated accessors from ClojureFX!
 
-Next, you can define action handlers. Note that ``@emph{Special Handlers}'' (@uref{https://docs.oracle.com/javase/8/javafx/api/javafx/fxml/doc-files/introduction_to_fxml.html#collections_and_property_handlers, as defined here}) are not yet fully supported; they should work though. If not, let me know! You simply provide the attribute, e.g. an @option{onAction} attribute, with the method name prefixed with a pound sign; note that the method name CamelCase will be automatically converted to kebab-case. E.g. @code{<Button onAction="#buttonClicked" />} will call @code{(button-clicked event)} in the namespace you provided (see below).
+Next, you can define action handlers. Note that ``@emph{Special Handlers}'' (@uref{https://docs.oracle.com/javase/8/javafx/api/javafx/fxml/doc-files/introduction_to_fxml.html#collections_and_property_handlers, as defined here}) are not yet fully supported; I'm working on them! You simply provide the attribute, e.g. an @option{onAction} attribute, with the method name prefixed with a pound sign; note that the method name CamelCase will be automatically converted to kebab-case. E.g. @code{<Button onAction="#buttonClicked" />} will call @code{(button-clicked controller-instance event)} in the namespace you provided (see below).
 
 Now, finally, it's time to weld the parts together. But wait! Your @acronym{FXML} file doesn't have any companion, no controller class, let alone the @code{ch.lyrion.MyController} we told it to look for!
 No worries, we got you covered. @ref{load-fxml-with-controller} has your and your file's back. It doesn't just load the @acronym{FXML} and returns a @code{Node}, it also parses the source and generates your file's companion on the fly. For that, it needs a couple more infos than @code{load-fxml} though: first, of course, the file path, but also the fully qualified clojure function in @code{String} form that will be called when the class gets initialized by JavaFX. Note that all action handlers defined above also have to be in the namespace of that function.
@@ -158,15 +160,29 @@ Unfortunately, FXML scripting is currently broken (outdated JSR-223 implementati
 With this command, ClojureFX loads an FXML file and returns it as a @uref{https://docs.oracle.com/javase/8/javafx/api/javafx/scene/Node.html, javafx.scene.Node}. Note that the filename will be parsed by @code{clojure.io/resource} before loading.
 @end deffn
 
+@anchor{generate-controller}
+@deffn clojurefx.fxml generate-controller filename init-fn
+Generates a controller using the @code{fx:id} definitions in the given @file{filename}.
+@end deffn
+
 @anchor{load-fxml-with-controller}
-@deffn clojurefx.fxml load-fxml-with-controller filename clazz init-fn
-Like @ref{load-fxml}, but also generates and loads an accompanying controller class.
+@deffn clojurefx.fxml load-fxml-with-controller filename init-fn
+Like @ref{load-fxml}, but also generates and loads an accompanying controller class using @ref{generate-controller}.
 @end deffn
 
 @node Event handling
 @chapter Event handling
 
 @strong{Coming soon.}
+
+@node Roadmap
+@chapter Roadmap
+
+@itemize @bullet
+@item Allow for non-ActionEvent binding.
+@item Testing and fixing Scenegraph coding API.
+@item Fixing JSR-223 implementation.
+@end itemize
 
 @node Index
 @unnumbered Index

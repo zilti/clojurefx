@@ -4,11 +4,12 @@
   (:require [clojure.xml :as xml]
             [clojure.zip :as zip]
             [clojure.string :as str]
+            [clojure.java.io :as io]
             [taoensso.timbre :as timbre]
             [camel-snake-kebab.core :as csk]))
 (timbre/refer-timbre)
 
-(def xmlzip (zip/xml-zip (xml/parse "/home/zilti/projects/lizenztool/resources/fxml/mainwindow.fxml")))
+;; (def xmlzip (zip/xml-zip (xml/parse "/home/zilti/projects/lizenztool/resources/fxml/mainwindow.fxml")))
 
 ;; Compiler
 
@@ -22,7 +23,7 @@
 
 ;; Parser
 
-(def stockimports "import clojure.java.api.Clojure;\nimport clojure.lang.IFn;\nimport java.net.URL;\nimport java.util.ResourceBundle;\nimport javafx.fxml.FXML;\n")
+(def stockimports "import clojure.java.api.Clojure;\nimport clojure.lang.IFn;\nimport java.net.URL;\nimport java.util.ResourceBundle;\nimport javafx.event.ActionEvent;\nimport javafx.fxml.FXML;\n")
 
 (def stockprops "    @FXML
     private ResourceBundle resources;
@@ -76,7 +77,7 @@
 
 (defn gen-handlers [coll clj-ns]
   (->> (flatten coll) 
-       (map #(format "    @FXML\n    void %s(Object event) {\n        Clojure.var(\"%s\", \"%s\").invoke(event);\n    }\n\n"
+       (map #(format "    @FXML\n    void %s(ActionEvent event) {\n        Clojure.var(\"%s\", \"%s\").invoke(this, event);\n    }\n\n"
                      (subs % 1) clj-ns (csk/->kebab-case (subs % 1))))
        (str/join "")))
 
@@ -105,7 +106,7 @@
 ;; Plumber
 
 (defn gen-fx-controller-class [fxmlpath clj-fn]
-  (let [fxmlzip (zip-tree-seq (xml/parse fxmlpath))
+  (let [fxmlzip (zip-tree-seq (xml/parse (io/input-stream fxmlpath)))
         clazz (get-controller-class fxmlzip)
         [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2)))
         cljvec (str/split clj-fn #"/")] 
