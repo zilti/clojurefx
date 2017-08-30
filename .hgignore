@@ -29,3 +29,6 @@ out/
 .nrepl-port
 *~
 .idea/
+
+syntax: glob
+*.xml
