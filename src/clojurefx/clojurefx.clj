@@ -20,12 +20,13 @@
   (let [iface-ref (reflect/type-reflect interface)
         bogus (debug "iface-ref:" iface-ref)
         methods (filter #(instance? clojure.reflect.Method %) (:members iface-ref))
-        bogus (debug "methods:" (pr-str methods))
-        method-sym (:name (first methods))]
+        functional-method (filter (fn [x] (some #(= % :abstract) (:flags x))) methods)
+        bogus (debug "methods:" (pr-str functional-method))
+        method-sym (:name (first functional-method))]
     (debug "method-sym:" method-sym)
 
-    (when-not (= (count methods) 1) 
-      (throw (new Exception (str "can't take an interface with more than one method:" (pr-str methods)))))
+    (when-not (= (count functional-method) 1)
+      (throw (new Exception (str "can't take an interface with more than one method:" (pr-str functional-method)))))
 
     (debug (pr-str `(proxy [~interface] []
                       (~method-sym ~args ~@code))))

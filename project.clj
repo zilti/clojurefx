@@ -1,4 +1,4 @@
-(defproject clojurefx/clojurefx "0.3.0"
+(defproject clojurefx/clojurefx "0.3.1-SNAPSHOT"
   :description "A Clojure wrapper for JavaFX."
   :license "Like Clojure."
   :url "https://www.bitbucket.org/zilti/clojurefx"
@@ -10,8 +10,8 @@
                  [com.taoensso/timbre "4.7.4" :exclusions [com.taoensso/carmine]]
                  [net.openhft/compiler "2.3.0"]
                  [clojure-jsr-223 "0.1.0"]]
-  ;; :profiles {:uberjar {:aot :all}}      
   :profiles {:test {:source-paths ["test"]
-                    :resource-paths ["test-resources"]}}
+                    :resource-paths ["test-resources"]}
+             :uberjar {:aot :all}}
   :source-paths ["src"]
   :java-source-paths ["src"])

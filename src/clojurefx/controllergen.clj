@@ -106,7 +106,9 @@
 ;; Plumber
 
 (defn gen-fx-controller-class [fxmlpath clj-fn]
-  (let [fxmlzip (zip-tree-seq (xml/parse (io/input-stream fxmlpath)))
+  (let [clj-fn (if (symbol? clj-fn)
+                 (str (namespace clj-fn) "/" (name clj-fn)))
+        fxmlzip (zip-tree-seq (xml/parse (io/input-stream fxmlpath)))
         clazz (get-controller-class fxmlzip)
         [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2)))
         cljvec (str/split clj-fn #"/")] 
