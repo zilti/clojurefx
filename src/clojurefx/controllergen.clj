@@ -1,5 +1,9 @@
 (ns clojurefx.controllergen
-  (import (net.openhft.compiler CachedCompiler CompilerUtils))
+  (:gen-class :name Controllergen
+              :implements [org.objectweb.asm.Opcodes]
+              :prefix "")
+  ;; (:import (net.openhft.compiler CachedCompiler CompilerUtils))
+  (:import org.objectweb.asm.ClassWriter)
   (:use swiss.arrows)
   (:require [clojure.xml :as xml]
             [clojure.zip :as zip]
@@ -13,31 +17,65 @@
 
 ;; Compiler
 
-(defonce cached-compiler (CachedCompiler. nil nil))
+;; (defonce cached-compiler (CachedCompiler. nil nil))
 
-(defn makeclass [pkg classname code]
-  (debug (str "\n" code))
-  (try
-    (.loadFromJava cached-compiler (str/join "." [pkg classname]) code)
-    (catch java.lang.ClassNotFoundException e (error e))))
+;; (defn makeclass [pkg classname code]
+;;   (debug (str "\n" code))
+;;   (try
+;;     (.loadFromJava cached-compiler (str/join "." [pkg classname]) code)
+;;     (catch java.lang.ClassNotFoundException e (error e))))
 
-;; Parser
+;; ;; Parser
 
-(def stockimports "import clojure.java.api.Clojure;\nimport clojure.lang.IFn;\nimport java.net.URL;\nimport java.util.ResourceBundle;\nimport javafx.event.ActionEvent;\nimport javafx.fxml.FXML;\n")
+(def imports (list clojure.java.api.Clojure clojure.lang.IFn java.net.URL java.util.ResourceBundle javafx.event.ActionEvent javafx.fxml.FXML))
 
-(def stockprops "    @FXML
-    private ResourceBundle resources;
+(defn build-imports [filename] 
+  (->> slurp filename
+       str/split-lines
+       (filter #(str/starts-with? % "<?import"))
+       (map #(str/replace % #"<\?" ""))
+       (map #(str/replace % #"\?>" ""))
+       (map #(Class/forName %))
+       (reduce conj imports)))
 
-    @FXML
-    private URL location;\n\n")
+(defn qualify-class [imports class-str]
+  (first (filter #(= class-str (last (str/split (pr-str %) #"\."))))))
 
-(defn get-imports [filename]
-  (->>  (slurp filename)
-        (str/split-lines)
-        (filter #(str/starts-with? % "<?import"))
-        (map #(str/replace % #"<\?" ""))
-        (map #(str/replace % #"\?>" ";"))
-        (str/join "\n")))
+(defn init-class [pkg classname]
+  (let [cw (new org.objectweb.asm.ClassWriter 0)]
+    (.. cw (visit V1_8
+                  (+ ACC_PUBLIC)
+                  (str pkg "/" classname)
+                  nil
+                  "java/lang/Object"
+                  nil)
+        (visitField ACC_PRIVATE
+                    "resources"
+                    (pr-str (qualify-class "ResourceBundle"))
+                    null
+                    null)
+        (visitField ACC_PRIVATE
+                    "location"
+                    (pr-str (qualify-class "URL"))
+                    null
+                    null))
+    cw))
+
+;; (def stockimports "import clojure.java.api.Clojure;\nimport clojure.lang.IFn;\nimport java.net.URL;\nimport java.util.ResourceBundle;\nimport javafx.event.ActionEvent;\nimport javafx.fxml.FXML;\n")
+
+;; (def stockprops "    @FXML
+;;     private ResourceBundle resources;
+
+;;     @FXML
+;;     private URL location;\n\n")
+
+;; (defn get-imports [filename]
+;;   (->>  (slurp filename)
+;;         (str/split-lines)
+;;         (filter #(str/starts-with? % "<?import"))
+;;         (map #(str/replace % #"<\?" ""))
+;;         (map #(str/replace % #"\?>" ";"))
+;;         (str/join "\n")))
 
 (defn zip-tree-seq [node]
   (tree-seq (complement string?)
@@ -66,51 +104,51 @@
        :attrs
        :fx:controller))
 
-(defn gen-props [coll]
-  (let [props-str
-        (->> (flatten coll) 
-             (map #(format "    @FXML\n    public %s %s;\n\n"
-                           (name (:tag %)) (get-in % [:attrs :fx:id])))
-             (str/join ""))]
-    (debug (type props-str))
-    props-str))
+;; (defn gen-props [coll]
+;;   (let [props-str
+;;         (->> (flatten coll) 
+;;              (map #(format "    @FXML\n    public %s %s;\n\n"
+;;                            (name (:tag %)) (get-in % [:attrs :fx:id])))
+;;              (str/join ""))]
+;;     (debug (type props-str))
+;;     props-str))
 
-(defn gen-handlers [coll clj-ns]
-  (->> (flatten coll) 
-       (map #(format "    @FXML\n    void %s(ActionEvent event) {\n        Clojure.var(\"%s\", \"%s\").invoke(this, event);\n    }\n\n"
-                     (subs % 1) clj-ns (csk/->kebab-case (subs % 1))))
-       (str/join "")))
+;; (defn gen-handlers [coll clj-ns]
+;;   (->> (flatten coll) 
+;;        (map #(format "    @FXML\n    void %s(ActionEvent event) {\n        Clojure.var(\"%s\", \"%s\").invoke(this, event);\n    }\n\n"
+;;                      (subs % 1) clj-ns (csk/->kebab-case (subs % 1))))
+;;        (str/join "")))
 
-(defn gen-initializer [cns cfn]
-  (format "    @FXML
-    void initialize() {
-        Clojure.var(\"%s\", \"%s\").invoke(this);
-    }" cns cfn))
+;; (defn gen-initializer [cns cfn]
+;;   (format "    @FXML
+;;     void initialize() {
+;;         Clojure.var(\"%s\", \"%s\").invoke(this);
+;;     }" cns cfn))
 
-(defn gen-fx-controller [fxmlzip fxmlpath [clj-ns clj-fn]]
-  (let [clazz (get-controller-class fxmlzip)
-        [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2)))
-        fxid-elems (get-fxid-elems fxmlzip)
-        handler-fns (get-handler-fns fxmlzip)]
-    (debug "fxid-elems:" (pr-str fxid-elems))
-    (debug "handler-fns:" (pr-str handler-fns))
-    (str (format "package %s;\n\n" pkg)
-         stockimports
-         (get-imports fxmlpath)
-         (format "\n\npublic class %s {\n\n" classname)
-         (gen-props fxid-elems)
-         (gen-handlers handler-fns clj-ns)
-         (gen-initializer clj-ns clj-fn)
-         "\n}")))
+;; (defn gen-fx-controller [fxmlzip fxmlpath [clj-ns clj-fn]]
+;;   (let [clazz (get-controller-class fxmlzip)
+;;         [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2)))
+;;         fxid-elems (get-fxid-elems fxmlzip)
+;;         handler-fns (get-handler-fns fxmlzip)]
+;;     (debug "fxid-elems:" (pr-str fxid-elems))
+;;     (debug "handler-fns:" (pr-str handler-fns))
+;;     (str (format "package %s;\n\n" pkg)
+;;          stockimports
+;;          (get-imports fxmlpath)
+;;          (format "\n\npublic class %s {\n\n" classname)
+;;          (gen-props fxid-elems)
+;;          (gen-handlers handler-fns clj-ns)
+;;          (gen-initializer clj-ns clj-fn)
+;;          "\n}")))
 
-;; Plumber
+;; ;; Plumber
 
-(defn gen-fx-controller-class [fxmlpath clj-fn]
-  (let [clj-fn (if (symbol? clj-fn)
-                 (str (namespace clj-fn) "/" (name clj-fn))
-                 clj-fn)
-        fxmlzip (zip-tree-seq (xml/parse (io/input-stream fxmlpath)))
-        clazz (get-controller-class fxmlzip)
-        [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2)))
-        cljvec (str/split clj-fn #"/")] 
-    (makeclass pkg classname (gen-fx-controller fxmlzip fxmlpath cljvec))))
+;; (defn gen-fx-controller-class [fxmlpath clj-fn]
+;;   (let [clj-fn (if (symbol? clj-fn)
+;;                  (str (namespace clj-fn) "/" (name clj-fn))
+;;                  clj-fn)
+;;         fxmlzip (zip-tree-seq (xml/parse (io/input-stream fxmlpath)))
+;;         clazz (get-controller-class fxmlzip)
+;;         [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2)))
+;;         cljvec (str/split clj-fn #"/")] 
+;;     (makeclass pkg classname (gen-fx-controller fxmlzip fxmlpath cljvec))))

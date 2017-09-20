@@ -9,6 +9,7 @@
                  [org.controlsfx/controlsfx "8.40.13"]
                  [com.taoensso/timbre "4.7.4" :exclusions [com.taoensso/carmine]]
                  [net.openhft/compiler "2.3.0"]
+                 [org.ow2.asm/asm "6.0_BETA"]
                  [clojure-jsr-223 "0.1.0"]]
   :profiles {:test {:source-paths ["test"]
                     :resource-paths ["test-resources"]}
