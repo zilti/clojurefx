@@ -42,10 +42,12 @@
   (first (filter #(= class-str (last (str/split (pr-str %) #"\."))) imports)))
 
 (defn init-class [pkg classname import-classes]
+  (debug (str (str/replace pkg #"\." "/") "/" classname))
+
   (let [cw (new org.objectweb.asm.ClassWriter 0)
         clazz (.visit cw Opcodes/V1_8
                       (+ Opcodes/ACC_PUBLIC Opcodes/ACC_SUPER)
-                      (str pkg "/" classname)
+                      (str (str/replace pkg #"\." "/") "/" classname)
                       nil
                       "java/lang/Object"
                       nil)
@@ -159,13 +161,14 @@
 ;;          (gen-initializer clj-ns clj-fn)
 ;;          "\n}")))
 
-(defn gen-fx-controller [fxmlzip fxmlpath [clj-ns clj-fn] [pkg classname]]
+(defn gen-fx-controller #^Byte [fxmlzip fxmlpath [clj-ns clj-fn] [pkg classname]]
   (let [fxid-elems (get-fxid-elems fxmlzip)
         handler-fns (get-handler-fns fxmlzip)
         import-classes (build-imports fxmlpath)]
     (-> (init-class pkg classname import-classes)
         (gen-props fxid-elems import-classes)
-        (gen-handlers handler-fns clj-ns))))
+        (gen-handlers handler-fns clj-ns)
+        .toByteArray)))
 
 ;; ;; Plumber
 
@@ -180,11 +183,16 @@
 ;;     (makeclass pkg classname (gen-fx-controller fxmlzip fxmlpath cljvec))))
 
 (defn gen-fx-controller-class [fxmlpath clj-fn]
-  (let [clj-fn (if (symbol? clj-fn)
-                 (str (namespace clj-fn) "/" (name clj-fn))
-                 clj-fn)
+  (let [clj-fn ^String (if (symbol? clj-fn)
+                         (str (namespace clj-fn) "/" (name clj-fn))
+                         clj-fn)
         fxmlzip (zip-tree-seq (xml/parse (io/input-stream fxmlpath)))
         clazz (get-controller-class fxmlzip)
-        [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2)))
-        cljvec (str/split clj-fn #"/")]
-    (gen-fx-controller fxmlzip fxmlpath cljvec [pkg classname])))
+        [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2))) 
+        cljvec (str/split clj-fn #"/")
+        controllerclass #^Byte (gen-fx-controller fxmlzip fxmlpath cljvec [pkg classname])
+        classloader (.getContextClassLoader (Thread/currentThread))]
+    (debug "Controllerclass array size is" (count controllerclass) "Byte")
+    (debug "Controllerclass of class" (str pkg "." classname) "has an array size of" (count controllerclass) "Byte")
+    (debug (type controllerclass))
+    (.defineClass classloader (str pkg "." classname) controllerclass 0 (count controllerclass))))
