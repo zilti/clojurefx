@@ -30,18 +30,18 @@
 (def imports (list clojure.java.api.Clojure clojure.lang.IFn java.net.URL java.util.ResourceBundle javafx.event.ActionEvent javafx.fxml.FXML))
 
 (defn build-imports [filename] 
-  (->> slurp filename
+  (->> (slurp filename)
        str/split-lines
        (filter #(str/starts-with? % "<?import"))
-       (map #(str/replace % #"<\?" ""))
+       (map #(str/replace % #"<\?import " ""))
        (map #(str/replace % #"\?>" ""))
        (map #(Class/forName %))
        (reduce conj imports)))
 
 (defn qualify-class [imports class-str]
-  (first (filter #(= class-str (last (str/split (pr-str %) #"\."))))))
+  (first (filter #(= class-str (last (str/split (pr-str %) #"\."))) imports)))
 
-(defn init-class [pkg classname]
+(defn init-class [pkg classname import-classes]
   (let [cw (new org.objectweb.asm.ClassWriter 0)
         clazz (.visit cw Opcodes/V1_8
                       (+ Opcodes/ACC_PUBLIC Opcodes/ACC_SUPER)
@@ -51,12 +51,12 @@
                       nil)
         resources_fv (.visitField cw Opcodes/ACC_PRIVATE
                                   "resources"
-                                  (pr-str (qualify-class "ResourceBundle"))
+                                  (pr-str (qualify-class import-classes "ResourceBundle"))
                                   nil
                                   nil)
         url_fv (.visitField cw Opcodes/ACC_PRIVATE
                             "location"
-                            (pr-str (qualify-class "URL"))
+                            (pr-str (qualify-class import-classes "URL"))
                             nil
                             nil)]
     (-> (.visitAnnotation resources_fv "Ljavafx/fxml/FXML;" true)
@@ -96,16 +96,16 @@
        :attrs
        :fx:controller))
 
-(defn gen-props [cw [entry & coll]]
+(defn gen-props [cw [entry & coll] import-classes]
   (if-not (empty? coll)
     (let [fv (.visitField cw Opcodes/ACC_PUBLIC
                           (get-in entry [:attrs :fx:id])
-                          (pr-str (qualify-class (name (:tag entry))))
+                          (pr-str (qualify-class import-classes (name (:tag entry))))
                           nil nil)]
       (-> (.visitAnnotation fv "Ljava/fxml/FXML;" true)
           .visitEnd)
       (.visitEnd fv)
-      (recur cw coll))
+      (recur cw coll import-classes))
     cw))
 
 (defn gen-handlers [cw [entry & coll] clj-ns]
@@ -119,7 +119,7 @@
       (.. mv
           visitCode
           (visitLdcInsn clj-ns)
-          (visitLdcInsn (csk/->kebab-case (subs % 1)))
+          (visitLdcInsn (csk/->kebab-case (subs entry 1)))
           (visitMethodInsn Opcodes/INVOKESTATIC "clojure/java/api/Clojure" "var" "(Ljava/lang/Object;Ljava/lang/Object;)Lclojure/lang/IFn;" false)
           (visitVarInsn Opcodes/ALOAD 0)
           (visitVarInsn Opcodes/ALOAD 1)
@@ -159,6 +159,14 @@
 ;;          (gen-initializer clj-ns clj-fn)
 ;;          "\n}")))
 
+(defn gen-fx-controller [fxmlzip fxmlpath [clj-ns clj-fn] [pkg classname]]
+  (let [fxid-elems (get-fxid-elems fxmlzip)
+        handler-fns (get-handler-fns fxmlzip)
+        import-classes (build-imports fxmlpath)]
+    (-> (init-class pkg classname import-classes)
+        (gen-props fxid-elems import-classes)
+        (gen-handlers handler-fns clj-ns))))
+
 ;; ;; Plumber
 
 ;; (defn gen-fx-controller-class [fxmlpath clj-fn]
@@ -171,4 +179,12 @@
 ;;         cljvec (str/split clj-fn #"/")] 
 ;;     (makeclass pkg classname (gen-fx-controller fxmlzip fxmlpath cljvec))))
 
-(defn gen-fx-controller-class [fxmlpath clj-fn])
+(defn gen-fx-controller-class [fxmlpath clj-fn]
+  (let [clj-fn (if (symbol? clj-fn)
+                 (str (namespace clj-fn) "/" (name clj-fn))
+                 clj-fn)
+        fxmlzip (zip-tree-seq (xml/parse (io/input-stream fxmlpath)))
+        clazz (get-controller-class fxmlzip)
+        [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2)))
+        cljvec (str/split clj-fn #"/")]
+    (gen-fx-controller fxmlzip fxmlpath cljvec [pkg classname])))

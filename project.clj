@@ -3,7 +3,7 @@
   :license "Like Clojure."
   :url "https://www.bitbucket.org/zilti/clojurefx"
   :signing {:gpg-key "68484437"}
-  :dependencies [[org.clojure/clojure "1.9.0-beta1"]
+  :dependencies [[org.clojure/clojure "1.9.0-RC1"]
                  [swiss-arrows "1.0.0"]
                  [camel-snake-kebab "0.4.0"]
                  [org.controlsfx/controlsfx "8.40.13"]
