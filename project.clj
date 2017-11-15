@@ -1,4 +1,4 @@
-(defproject clojurefx/clojurefx "0.3.1-SNAPSHOT"
+(defproject clojurefx/clojurefx "0.3.9-SNAPSHOT"
   :description "A Clojure wrapper for JavaFX."
   :license "Like Clojure."
   :url "https://www.bitbucket.org/zilti/clojurefx"
@@ -9,8 +9,8 @@
                  [org.controlsfx/controlsfx "8.40.13"]
                  [com.taoensso/timbre "4.7.4" :exclusions [com.taoensso/carmine]]
                  [net.openhft/compiler "2.3.0"]
-                 [org.ow2.asm/asm "6.0_BETA"]
-                 [org.ow2.asm/asm-util "6.0_BETA"]
+                 [org.ow2.asm/asm "6.0"]
+                 [org.ow2.asm/asm-util "6.0"]
                  [clojure-jsr-223 "0.1.0"]]
   :profiles {:test {:source-paths ["test"]
                     :resource-paths ["test-resources"]}

@@ -2,7 +2,8 @@
   ;; (:gen-class :name Controllergen
   ;;             :implements [org.objectweb.asm.Opcodes])
   ;; (:import (net.openhft.compiler CachedCompiler CompilerUtils))
-  (:import (org.objectweb.asm ClassWriter Opcodes))
+  (:import (org.objectweb.asm ClassWriter Opcodes)
+           clojurefx.FXClassLoader)
   (:use swiss.arrows)
   (:require [clojure.xml :as xml]
             [clojure.zip :as zip]
@@ -12,18 +13,6 @@
             [camel-snake-kebab.core :as csk]
             [clojure.spec.alpha :as s]))
 (timbre/refer-timbre)
-
-;; (def xmlzip (zip/xml-zip (xml/parse "/home/zilti/projects/lizenztool/resources/fxml/mainwindow.fxml")))
-
-;; Compiler
-
-;; (defonce cached-compiler (CachedCompiler. nil nil))
-
-;; (defn makeclass [pkg classname code]
-;;   (debug (str "\n" code))
-;;   (try
-;;     (.loadFromJava cached-compiler (str/join "." [pkg classname]) code)
-;;     (catch java.lang.ClassNotFoundException e (error e))))
 
 ;; ;; Parser
 
@@ -39,9 +28,18 @@
        (reduce conj imports)))
 
 (defn qualify-class [imports class-str]
-  (first (filter #(= class-str (last (str/split (pr-str %) #"\."))) imports)))
+  (debug imports)
+  (let [classname (first (filter #(= class-str (last (str/split (pr-str %) #"\."))) imports))
+        classfull (str/replace classname #"\." "/")
+        classreal (str/split classfull #"\s")]
+    (-> (filter #(= class-str (last (str/split (pr-str %) #"\."))) imports)
+        first
+        (str/replace #"\." "/")
+        (str/split #"\s")
+        last)))
 
 (defn init-class [pkg classname import-classes]
+  {:post [(s/valid? (partial instance? org.objectweb.asm.ClassWriter) %)]}
   (debug (str (str/replace pkg #"\." "/") "/" classname))
 
   (let [cw (new org.objectweb.asm.ClassWriter 0)
@@ -52,13 +50,13 @@
                       "java/lang/Object"
                       nil)
         resources_fv (.visitField cw Opcodes/ACC_PRIVATE
-                                  "resources"
-                                  (pr-str (qualify-class import-classes "ResourceBundle"))
+                                  "resources" 
+                                  (str "L" (qualify-class import-classes "ResourceBundle") ";")
                                   nil
                                   nil)
         url_fv (.visitField cw Opcodes/ACC_PRIVATE
                             "location"
-                            (pr-str (qualify-class import-classes "URL"))
+                            (str "L" (qualify-class import-classes "URL") ";")
                             nil
                             nil)]
     (-> (.visitAnnotation resources_fv "Ljavafx/fxml/FXML;" true)
@@ -99,100 +97,97 @@
        :fx:controller))
 
 (defn gen-props [cw [entry & coll] import-classes]
-  (if-not (empty? coll)
+  {:post [(s/valid? (partial instance? org.objectweb.asm.ClassWriter) %)]}
+  (if-not (nil? entry)
     (let [fv (.visitField cw Opcodes/ACC_PUBLIC
                           (get-in entry [:attrs :fx:id])
-                          (pr-str (qualify-class import-classes (name (:tag entry))))
+                          (str "L" (qualify-class import-classes (name (:tag entry))) ";")
                           nil nil)]
-      (-> (.visitAnnotation fv "Ljava/fxml/FXML;" true)
+      (debug "Generating" (get-in entry [:attrs :fx:id]) "with type" (qualify-class import-classes (name (:tag entry))))
+      (-> (.visitAnnotation fv "Ljavafx/fxml/FXML;" true)
           .visitEnd)
       (.visitEnd fv)
-      (recur cw coll import-classes))
+      (gen-props cw coll import-classes))
     cw))
 
 (defn gen-handlers [cw [entry & coll] clj-ns]
-  (if-not (empty? coll)
+  {:post [(s/valid? (partial instance? org.objectweb.asm.ClassWriter) %)]}
+  (if-not (nil? entry)
     (let [mv (.visitMethod cw 0
                            (subs entry 1)
                            "(Ljavafx/event/ActionEvent;)V"
                            nil nil)]
-      (-> (.visitAnnotation mv "Ljava/fxml/FXML;" true)
+      (debug "Generating handler" (subs entry 1) "for" entry)
+      (-> (.visitAnnotation mv "Ljavafx/fxml/FXML;" true)
           .visitEnd)
-      (.. mv
-          visitCode
-          (visitLdcInsn clj-ns)
-          (visitLdcInsn (csk/->kebab-case (subs entry 1)))
-          (visitMethodInsn Opcodes/INVOKESTATIC "clojure/java/api/Clojure" "var" "(Ljava/lang/Object;Ljava/lang/Object;)Lclojure/lang/IFn;" false)
-          (visitVarInsn Opcodes/ALOAD 0)
-          (visitVarInsn Opcodes/ALOAD 1)
-          (visitMethodInsn Opcodes/INVOKEINTERFACE "clojure/lang/IFn" "invoke" "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;" true)
-          (visitInsn Opcodes/POP)
-          (visitInsn Opcodes/RETURN)
-          (visitMaxs 3 2)
-          visitEnd) 
-      (recur cw coll clj-ns))
+      (.visitCode mv)
+      (.visitLdcInsn mv clj-ns)
+      (.visitLdcInsn mv (csk/->kebab-case (subs entry 1)))
+      (.visitMethodInsn mv Opcodes/INVOKESTATIC "clojure/java/api/Clojure" "var" "(Ljava/lang/Object;Ljava/lang/Object;)Lclojure/lang/IFn;" false)
+      (.visitVarInsn mv Opcodes/ALOAD 0)
+      (.visitVarInsn mv Opcodes/ALOAD 1)
+      (.visitMethodInsn mv Opcodes/INVOKEINTERFACE "clojure/lang/IFn" "invoke" "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;" true)
+      (.visitInsn mv Opcodes/POP)
+      (.visitInsn mv Opcodes/RETURN)
+      (.visitMaxs mv 3 2)
+      (.visitEnd mv)
+      
+      (gen-handlers cw coll clj-ns))
     cw))
 
-;; (defn gen-handlers [coll clj-ns]
-;;   (->> (flatten coll) 
-;;        (map #(format "    @FXML\n    void %s(ActionEvent event) {\n        Clojure.var(\"%s\", \"%s\").invoke(this, event);\n    }\n\n"
-;;                      (subs % 1) clj-ns (csk/->kebab-case (subs % 1))))
-;;        (str/join "")))
+(defn gen-initializer [cw [clj-ns clj-fn]]
+  {:post [(s/valid? (partial instance? org.objectweb.asm.ClassWriter) %)]}
+  (debug clj-ns clj-fn)
+  (let [mv (.visitMethod cw Opcodes/ACC_PUBLIC "initialize" "()V" nil nil)
+        init-mv (.visitMethod cw Opcodes/ACC_PUBLIC "<init>" "()V" nil nil)]
+    (.visitCode mv)
+    (-> (.visitAnnotation mv "Ljavafx/fxml/FXML;" true)
+        .visitEnd)
+    (.visitLdcInsn mv clj-ns)
+    (.visitLdcInsn mv clj-fn)
+    (.visitMethodInsn mv Opcodes/INVOKESTATIC "clojure/java/api/Clojure" "var" "(Ljava/lang/Object;Ljava/lang/Object;)Lclojure/lang/IFn;" false)
+    (.visitVarInsn mv Opcodes/ALOAD 0) 
+    (.visitMethodInsn mv Opcodes/INVOKEINTERFACE "clojure/lang/IFn" "invoke" "(Ljava/lang/Object;)Ljava/lang/Object;" true)
+    (.visitInsn mv Opcodes/POP)
+    (.visitInsn mv Opcodes/RETURN)
+    (.visitMaxs mv 2 1)
+    (.visitEnd mv)
 
-;; (defn gen-initializer [cns cfn]
-;;   (format "    @FXML
-;;     void initialize() {
-;;         Clojure.var(\"%s\", \"%s\").invoke(this);
-;;     }" cns cfn))
+    (.visitCode init-mv)
+    (.visitVarInsn init-mv Opcodes/ALOAD 0)
+    (.visitMethodInsn init-mv Opcodes/INVOKESPECIAL "java/lang/Object" "<init>" "()V" false)
+    (.visitInsn init-mv Opcodes/RETURN)
+    (.visitMaxs init-mv 1 1)
+    (.visitEnd init-mv)
+    
+    cw))
 
-;; (defn gen-fx-controller [fxmlzip fxmlpath [clj-ns clj-fn]]
-;;   (let [clazz (get-controller-class fxmlzip)
-;;         [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2)))
-;;         fxid-elems (get-fxid-elems fxmlzip)
-;;         handler-fns (get-handler-fns fxmlzip)]
-;;     (debug "fxid-elems:" (pr-str fxid-elems))
-;;     (debug "handler-fns:" (pr-str handler-fns))
-;;     (str (format "package %s;\n\n" pkg)
-;;          stockimports
-;;          (get-imports fxmlpath)
-;;          (format "\n\npublic class %s {\n\n" classname)
-;;          (gen-props fxid-elems)
-;;          (gen-handlers handler-fns clj-ns)
-;;          (gen-initializer clj-ns clj-fn)
-;;          "\n}")))
-
-(defn gen-fx-controller #^Byte [fxmlzip fxmlpath [clj-ns clj-fn] [pkg classname]]
+(defn gen-fx-controller [fxmlzip fxmlpath [clj-ns clj-fn] [pkg classname]]
   (let [fxid-elems (get-fxid-elems fxmlzip)
-        handler-fns (get-handler-fns fxmlzip)
-        import-classes (build-imports fxmlpath)]
-    (-> (init-class pkg classname import-classes)
-        (gen-props fxid-elems import-classes)
-        (gen-handlers handler-fns clj-ns)
-        .toByteArray)))
+        handler-fns (get-handler-fns fxmlzip) 
+        import-classes (build-imports fxmlpath)
+        inited-class (init-class pkg classname import-classes)
+        propped-class (gen-props inited-class fxid-elems import-classes)
+        initializer-class (gen-initializer propped-class [clj-ns clj-fn])
+        handled-class (gen-handlers initializer-class handler-fns clj-ns)]
+    (debug (pr-str handler-fns))
+    (.visitEnd handled-class)
+    (with-open [out (io/output-stream (io/file "/home/zilti/Test.class"))]
+      (.write out (.toByteArray handled-class)))
+    (.toByteArray handled-class)))
 
 ;; ;; Plumber
 
-;; (defn gen-fx-controller-class [fxmlpath clj-fn]
-;;   (let [clj-fn (if (symbol? clj-fn)
-;;                  (str (namespace clj-fn) "/" (name clj-fn))
-;;                  clj-fn)
-;;         fxmlzip (zip-tree-seq (xml/parse (io/input-stream fxmlpath)))
-;;         clazz (get-controller-class fxmlzip)
-;;         [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2)))
-;;         cljvec (str/split clj-fn #"/")] 
-;;     (makeclass pkg classname (gen-fx-controller fxmlzip fxmlpath cljvec))))
-
-(defn gen-fx-controller-class [fxmlpath clj-fn]
+(defn gen-fx-controller-class [fxmlpath clj-fn] 
   (let [clj-fn ^String (if (symbol? clj-fn)
                          (str (namespace clj-fn) "/" (name clj-fn))
                          clj-fn)
         fxmlzip (zip-tree-seq (xml/parse (io/input-stream fxmlpath)))
         clazz (get-controller-class fxmlzip)
         [pkg classname] (reverse (map str/reverse (str/split (str/reverse clazz) #"\." 2))) 
-        cljvec (str/split clj-fn #"/")
-        controllerclass #^Byte (gen-fx-controller fxmlzip fxmlpath cljvec [pkg classname])
-        classloader (.getContextClassLoader (Thread/currentThread))]
-    (debug "Controllerclass array size is" (count controllerclass) "Byte")
-    (debug "Controllerclass of class" (str pkg "." classname) "has an array size of" (count controllerclass) "Byte")
-    (debug (type controllerclass))
-    (.defineClass classloader (str pkg "." classname) controllerclass 0 (count controllerclass))))
+        cljvec (str/split clj-fn #"/")]
+    (try
+      (Class/forName (str pkg "." classname))
+      (catch Exception e
+        (FXClassLoader/loadClass (str pkg "." classname)
+                                 (gen-fx-controller fxmlzip fxmlpath cljvec [pkg classname]))))))
