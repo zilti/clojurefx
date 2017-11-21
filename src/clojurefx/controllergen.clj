@@ -164,7 +164,7 @@
 
 (defn gen-fx-controller [fxmlzip fxmlpath [clj-ns clj-fn] [pkg classname]]
   (let [fxid-elems (get-fxid-elems fxmlzip)
-        handler-fns (get-handler-fns fxmlzip) 
+        handler-fns (get-handler-fns fxmlzip)
         import-classes (build-imports fxmlpath)
         inited-class (init-class pkg classname import-classes)
         propped-class (gen-props inited-class fxid-elems import-classes)
@@ -172,8 +172,6 @@
         handled-class (gen-handlers initializer-class handler-fns clj-ns)]
     (debug (pr-str handler-fns))
     (.visitEnd handled-class)
-    (with-open [out (io/output-stream (io/file "/home/zilti/Test.class"))]
-      (.write out (.toByteArray handled-class)))
     (.toByteArray handled-class)))
 
 ;; ;; Plumber
