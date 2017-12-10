@@ -1,9 +1,9 @@
-(defproject clojurefx/clojurefx "0.3.9-SNAPSHOT"
+(defproject clojurefx/clojurefx "0.4.0"
   :description "A Clojure wrapper for JavaFX."
   :license "Like Clojure."
   :url "https://www.bitbucket.org/zilti/clojurefx"
   :signing {:gpg-key "68484437"}
-  :dependencies [[org.clojure/clojure "1.9.0-RC1"]
+  :dependencies [[org.clojure/clojure "1.9.0-RC2"]
                  [swiss-arrows "1.0.0"]
                  [camel-snake-kebab "0.4.0"]
                  [org.controlsfx/controlsfx "8.40.13"]

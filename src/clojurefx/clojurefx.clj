@@ -10,8 +10,6 @@
 
 (timbre/refer-timbre)
 
-;; (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
-
 ;; ## Scenegraph
 
 (defmacro fi
@@ -39,42 +37,6 @@
   (let [argument (->> fun (drop 1) first)
         code (drop 2 fun)]
     `(.setValue (~(symbol (str (name obj) "/" (name prop)))) (fi javafx.event.ActionEvent ~argument ~@code))))
-
-;; (defn branch? [obj]
-;;   (or (and (instance? javafx.scene.Parent obj)
-;;            (not (instance? org.controlsfx.control.StatusBar obj)))
-;;       (instance? javafx.scene.control.MenuBar obj)
-;;       (instance? javafx.scene.control.Menu obj)))
-
-;; (defn make-node [node children]
-;;   nil)
-
-;; (defn down [x]
-;;   (cond
-;;     (instance? javafx.scene.control.Label x) (.getGraphic x)
-;;     (instance? javafx.scene.control.ProgressIndicator x) (.getContextMenu x)
-;;     (instance? javafx.scene.control.ScrollPane x) (.getContent x)
-;;     (instance? javafx.scene.control.MenuBar x) (.getMenus x)
-;;     (instance? javafx.scene.control.Menu x) (.getItems x)
-;;     (instance? javafx.scene.Parent x) (.getChildren x)
-;;     :else nil))
-
-;; (defn sgzipper [root]
-;;   (zip/zipper branch? down make-node root))
-
-;; (defn by-id [root id] 
-;;   (try
-;;     (cond 
-;;       (not (instance? clojure.lang.IFn root)) (do (trace "Raw input confirmed. Starting.")
-;;                                                   (by-id (sgzipper root) id)) 
-;;       (zip/end? root) (do (trace "Search ended without result.")
-;;                           nil)
-;;       (nil? (zip/node root)) (by-id (zip/next root) id)
-;;       (= id (.getId (zip/node root))) (do (debug "Found item:" (zip/node root))
-;;                                           (zip/node root))
-;;       :else (do (trace "id of" (zip/node root) "does not match, proceeding to" (zip/node (zip/next root)))
-;;                 (by-id (zip/next root) id)))
-;;     (catch Exception e (error e))))
 
 ;; ## Data
 

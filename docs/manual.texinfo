@@ -3,7 +3,7 @@
 @settitle ClojureFX Manual
 
 @copying
-This manual is for ClojureFX, version 0.3.0.
+This manual is for ClojureFX, version 0.4.0.
 
 Copyright @copyright{} 2017 Daniel Ziltener.
 @end copying
@@ -24,7 +24,7 @@ Copyright @copyright{} 2017 Daniel Ziltener.
 @node Top
 @top ClojureFX
 
-This is the documentation to ClojureFX, version 0.3.0.
+This is the documentation to ClojureFX, version 0.4.0.
 @c@end ifnottex
 
 @menu
@@ -40,11 +40,9 @@ This is the documentation to ClojureFX, version 0.3.0.
 @node Installation and deployment
 @chapter Installation and deployment
 
-The first, straightforward part of this is to add the dependency to your @file{project.clj} or @file{build.boot}, which consists simply of adding @code{[clojurefx "0.3.0"]}.
+The first, straightforward part of this is to add the dependency to your @file{project.clj} or @file{build.boot}, which consists simply of adding @code{[clojurefx "0.4.0"]}.
 
-In case you are planning to use the FXML controller generator (and in my opinion, you really should!), you have to add @file{tools.jar} to your classpath. For Leiningen, there is a @uref{https://github.com/pallet/lein-jdk-tools, plugin}. The gist of it is to add @file{$JAVA_HOME/../lib/tools.jar} to your @code{:resource-paths} and if possible put it into an exclusions list for the main jar; that way it will still be packed into the uberjar.
-
-For the users of @emph{OpenJDK} 7 and 8, @emph{OpenJFX}, the opensource implementation of JavaFX, is not included yet (it will be starting with OpenJDK 9). Luckily, many Linux distributions ship a separate OpenJFX package by now, but for those that don't, the OpenJDK wiki has an article @uref{https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX, ``Building OpenJFX''}.
+For the users of @emph{OpenJDK} 7 and 8, @emph{OpenJFX}, the opensource implementation of JavaFX, is not included yet (it will be starting with OpenJDK 9). Luckily, many Linux distributions ship a separate OpenJFX package by now, but for those that don't, the OpenJDK wiki has an article @uref{https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX, ``Building OpenJFX''}. Alternatively, you can of course install the Oracle JDK manually.
 
 @node Getting started
 @chapter Getting started
@@ -117,7 +115,7 @@ Turns the Hiccup-like tree into a JavaFX-Node.
 
 @acronym{FXML} is an @acronym{XML} format describing a JavaFX user interface. It also allows defining action handlers and, similar to HTML, inline scripting via script tags. You can find an introduction @uref{https://docs.oracle.com/javase/8/javafx/api/javafx/fxml/doc-files/introduction_to_fxml.html, on this site}.
 
-ClojureFX provides an idiomatic interface to load FXML files, and in this new version can even generate a controller class for you at runtime. For the latter, the user has to have @file{tools.jar} on his classpath (@pxref{Installation and deployment}).
+ClojureFX provides an idiomatic interface to load FXML files, and in this new version can even generate a controller class for you at runtime.
 
 @node Loading FXML files
 @section Loading FXML files
