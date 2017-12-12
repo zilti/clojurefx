@@ -6,14 +6,16 @@
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [swiss-arrows "1.0.0"]
                  [camel-snake-kebab "0.4.0"]
-                 [com.taoensso/timbre "4.7.4" :exclusions [com.taoensso/carmine]]
+                 [com.taoensso/timbre "4.10.0" :exclusions [com.taoensso/carmine]]
                  [net.openhft/compiler "2.3.0"]
                  [org.ow2.asm/asm "6.0"]
-                 [org.ow2.asm/asm-util "6.0"]
-                 [clojure-jsr-223 "0.1.0"]]
+                 [org.ow2.asm/asm-util "6.0"] 
+                 [clojure-jsr-223 "0.1.0"]
+                 ]
   :profiles {:test {:source-paths ["test"]
                     :resource-paths ["test-resources"]}
              :uberjar {:aot :all}}
   :aot :all
+  :omit-source true
   :source-paths ["src"]
   :java-source-paths ["src"])
