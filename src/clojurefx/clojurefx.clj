@@ -6,7 +6,8 @@
             [clojure.string :as str]
             [swiss.arrows :refer :all])
   (:import (javafx.scene.layout Region)
-           (javafx.scene.shape Rectangle)))
+           (javafx.scene.shape Rectangle)
+           (clojurefx.ApplicationInitializer)))
 
 (timbre/refer-timbre)
 
@@ -15,11 +16,9 @@
 (defmacro fi
   [interface args & code]
   (debug "interface:" interface) 
-  (let [iface-ref (reflect/type-reflect interface)
-        bogus (debug "iface-ref:" iface-ref)
+  (let [iface-ref (reflect/type-reflect interface) 
         methods (filter #(instance? clojure.reflect.Method %) (:members iface-ref))
-        functional-method (filter (fn [x] (some #(= % :abstract) (:flags x))) methods)
-        bogus (debug "methods:" (pr-str functional-method))
+        functional-method (filter (fn [x] (some #(= % :abstract) (:flags x))) methods) 
         method-sym (:name (first functional-method))]
     (debug "method-sym:" method-sym)
 
@@ -37,6 +36,9 @@
   (let [argument (->> fun (drop 1) first)
         code (drop 2 fun)]
     `(.setValue (~(symbol (str (name obj) "/" (name prop)))) (fi javafx.event.ActionEvent ~argument ~@code))))
+
+(defn start-app [app-init app-start app-stop]
+  (clojurefx.ApplicationInitializer/initApp app-init app-start app-stop))
 
 ;; ## Data
 

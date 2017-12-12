@@ -28,7 +28,6 @@
        (reduce conj imports)))
 
 (defn qualify-class [imports class-str]
-  (debug imports)
   (let [classname (first (filter #(= class-str (last (str/split (pr-str %) #"\."))) imports))
         classfull (str/replace classname #"\." "/")
         classreal (str/split classfull #"\s")]
