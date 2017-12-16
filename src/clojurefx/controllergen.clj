@@ -2,8 +2,7 @@
   ;; (:gen-class :name Controllergen
   ;;             :implements [org.objectweb.asm.Opcodes])
   ;; (:import (net.openhft.compiler CachedCompiler CompilerUtils))
-  (:import (org.objectweb.asm ClassWriter Opcodes)
-           clojurefx.FXClassLoader)
+  (:import (org.objectweb.asm ClassWriter Opcodes))
   (:use swiss.arrows)
   (:require [clojure.xml :as xml]
             [clojure.zip :as zip]
@@ -175,6 +174,15 @@
 
 ;; ;; Plumber
 
+(defn define-class [name bytes]
+  (let [cl (.getClassLoader clojure.lang.RT)
+        method (.getDeclaredMethod java.lang.ClassLoader "defineClass"
+                                   (into-array [String (Class/forName "[B") (Integer/TYPE) (Integer/TYPE)]))]
+    (try
+      (.setAccessible method true)
+      (.invoke method cl (into-array Object [name bytes (int 0) (int (count bytes))]))
+      (finally (.setAccessible method false)))))
+
 (defn gen-fx-controller-class [fxmlpath clj-fn] 
   (let [clj-fn ^String (if (symbol? clj-fn)
                          (str (namespace clj-fn) "/" (name clj-fn))
@@ -186,5 +194,5 @@
     (try
       (Class/forName (str pkg "." classname))
       (catch Exception e
-        (FXClassLoader/loadClass (str pkg "." classname)
-                                 (gen-fx-controller fxmlzip fxmlpath cljvec [pkg classname]))))))
+        (define-class (str pkg "." classname)
+          (gen-fx-controller fxmlzip fxmlpath cljvec [pkg classname]))))))
