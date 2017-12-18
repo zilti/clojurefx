@@ -446,7 +446,7 @@ The header at the top of each page / section
 div.header {
    padding-top: 0.5ex;
    padding-bottom: 0.5ex;
-   background-color: #ddddff;
+   /*background-color: #ddddff;*/
 
    /* This will extend the background color of the header
       bar to the entire width of the page (and beyond),

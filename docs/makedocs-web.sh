@@ -2,7 +2,7 @@
 cd docs
 makeinfo --css-ref=datamash-texinfo.css --html --no-split manual.texinfo
 echo '0a
-<div class="fossil-doc" data-title="Title Text">
+<div class="fossil-doc" data-title="ClojureFX Manual">
 .
 $a
 </div>
