@@ -142,7 +142,7 @@ To bind any element to your new controller (in the form of a @code{Property}), y
 
 Next, you can define action handlers. Note that ``@emph{Special Handlers}'' (@uref{https://docs.oracle.com/javase/8/javafx/api/javafx/fxml/doc-files/introduction_to_fxml.html#collections_and_property_handlers, as defined here}) are not yet fully supported; I'm working on them! You simply provide the attribute, e.g. an @option{onAction} attribute, with the method name prefixed with a pound sign; note that the method name CamelCase will be automatically converted to kebab-case. E.g. @code{<Button onAction="#buttonClicked" />} will call @code{(button-clicked controller-instance event)} in the namespace you provided (see below).
 
-Now, finally, it's time to weld the parts together. But wait! Your @acronym{FXML} file doesn't have any companion, no controller class, let alone the @code{ch.lyrion.MyController} we told it to look for!
+Now, finally, it is time to weld the parts together. But wait! Your @acronym{FXML} file doesn't have any companion, no controller class, let alone the @code{ch.lyrion.MyController} we told it to look for!
 No worries, we got you covered. @ref{load-fxml-with-controller} has your and your file's back. It doesn't just load the @acronym{FXML} and returns a @code{Node}, it also parses the source and generates your file's companion on the fly. For that, it needs a couple more infos than @code{load-fxml} though: first, of course, the file path, but also the fully qualified clojure function in @code{String} form that will be called when the class gets initialized by JavaFX. Note that all action handlers defined above also have to be in the namespace of that function.
 
 @node FXML scripting
