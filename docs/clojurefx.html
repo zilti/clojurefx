@@ -1,4 +1,4 @@
-<div class="fossil-doc" data-title="Title Text">
+<div class="fossil-doc" data-title="ClojureFX Manual">
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <!-- This manual is for ClojureFX, version 0.4.0.
@@ -288,7 +288,7 @@ Next: <a href="#FXML-scripting" accesskey="n" rel="next">FXML scripting</a>, Pre
 </p>
 <p>Next, you can define action handlers. Note that &ldquo;<em>Special Handlers</em>&rdquo; (<a href="https://docs.oracle.com/javase/8/javafx/api/javafx/fxml/doc-files/introduction_to_fxml.html#collections_and_property_handlers">as defined here</a>) are not yet fully supported; I&rsquo;m working on them! You simply provide the attribute, e.g. an <samp>onAction</samp> attribute, with the method name prefixed with a pound sign; note that the method name CamelCase will be automatically converted to kebab-case. E.g. <code>&lt;Button onAction=&quot;#buttonClicked&quot; /&gt;</code> will call <code>(button-clicked controller-instance event)</code> in the namespace you provided (see below).
 </p>
-<p>Now, finally, it&rsquo;s time to weld the parts together. But wait! Your <acronym>FXML</acronym> file doesn&rsquo;t have any companion, no controller class, let alone the <code>ch.lyrion.MyController</code> we told it to look for!
+<p>Now, finally, it is time to weld the parts together. But wait! Your <acronym>FXML</acronym> file doesn&rsquo;t have any companion, no controller class, let alone the <code>ch.lyrion.MyController</code> we told it to look for!
 No worries, we got you covered. <a href="#load_002dfxml_002dwith_002dcontroller">load-fxml-with-controller</a> has your and your file&rsquo;s back. It doesn&rsquo;t just load the <acronym>FXML</acronym> and returns a <code>Node</code>, it also parses the source and generates your file&rsquo;s companion on the fly. For that, it needs a couple more infos than <code>load-fxml</code> though: first, of course, the file path, but also the fully qualified clojure function in <code>String</code> form that will be called when the class gets initialized by JavaFX. Note that all action handlers defined above also have to be in the namespace of that function.
 </p>
 <hr>
