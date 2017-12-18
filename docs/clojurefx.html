@@ -1,0 +1,405 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- This manual is for ClojureFX, version 0.4.0.
+
+Copyright (C) 2017 Daniel Ziltener. -->
+<!-- Created by GNU Texinfo 6.4, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>ClojureFX Manual</title>
+
+<meta name="description" content="ClojureFX Manual">
+<meta name="keywords" content="ClojureFX Manual">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="#Top" rel="start" title="Top">
+<link href="#Index" rel="index" title="Index">
+<link href="#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="dir.html#Top" rel="up" title="(dir)">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+blockquote.smallindentedblock {margin-right: 0em; font-size: smaller}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="datamash-texinfo.css">
+
+
+</head>
+
+<body lang="en">
+<h1 class="settitle" align="center">ClojureFX Manual</h1>
+
+
+
+<a name="SEC_Contents"></a>
+<h2 class="contents-heading">Table of Contents</h2>
+
+<div class="contents">
+
+<ul class="no-bullet">
+  <li><a name="toc-Installation-and-deployment-1" href="#Installation-and-deployment">1 Installation and deployment</a></li>
+  <li><a name="toc-Getting-started-1" href="#Getting-started">2 Getting started</a>
+  <ul class="no-bullet">
+    <li><a name="toc-Core-API-1" href="#Core-API">2.1 Core API</a></li>
+  </ul></li>
+  <li><a name="toc-Coding-a-scenegraph-1" href="#Coding-a-scenegraph">3 Coding a scenegraph</a>
+  <ul class="no-bullet">
+    <li><a name="toc-API" href="#Scenegraph-API">3.1 API</a></li>
+  </ul></li>
+  <li><a name="toc-FXML-and-controllers-1" href="#FXML-and-controllers">4 FXML and controllers</a>
+  <ul class="no-bullet">
+    <li><a name="toc-Loading-FXML-files-1" href="#Loading-FXML-files">4.1 Loading FXML files</a></li>
+    <li><a name="toc-Generating-controller-classes-1" href="#Generating-controller-classes">4.2 Generating controller classes</a></li>
+    <li><a name="toc-FXML-scripting-1" href="#FXML-scripting">4.3 FXML scripting</a></li>
+    <li><a name="toc-API-1" href="#FXML-API">4.4 API</a></li>
+  </ul></li>
+  <li><a name="toc-Event-handling-1" href="#Event-handling">5 Event handling</a></li>
+  <li><a name="toc-Roadmap-1" href="#Roadmap">6 Roadmap</a></li>
+  <li><a name="toc-Index-1" href="#Index">Index</a></li>
+</ul>
+</div>
+
+
+<a name="Top"></a>
+<div class="header">
+<p>
+Next: <a href="#Installation-and-deployment" accesskey="n" rel="next">Installation and deployment</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="ClojureFX"></a>
+<h1 class="top">ClojureFX</h1>
+
+<p>This is the documentation to ClojureFX, version 0.4.0.
+</p>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="#Installation-and-deployment" accesskey="1">Installation and deployment</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">adding ClojureFX and probably tools.jar to your build tool.
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Getting-started" accesskey="2">Getting started</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">the little ceremony necessary to get a window &ldquo;up and running&rdquo;.
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Coding-a-scenegraph" accesskey="3">Coding a scenegraph</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">for everyone who wants to write an UI the old-school way.
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#FXML-and-controllers" accesskey="4">FXML and controllers</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">loading FXML files and generating a controller.
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Event-handling" accesskey="5">Event handling</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">a short chapter about handling events.
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Roadmap" accesskey="6">Roadmap</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">what&rsquo;s up next?.
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Index" accesskey="7">Index</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">.
+</td></tr>
+</table>
+
+<hr>
+<a name="Installation-and-deployment"></a>
+<div class="header">
+<p>
+Next: <a href="#Getting-started" accesskey="n" rel="next">Getting started</a>, Previous: <a href="#Top" accesskey="p" rel="prev">Top</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="Installation-and-deployment-1"></a>
+<h2 class="chapter">1 Installation and deployment</h2>
+
+<p>The first, straightforward part of this is to add the dependency to your <samp>project.clj</samp> or <samp>build.boot</samp>, which consists simply of adding <code>[clojurefx &quot;0.4.0&quot;]</code>.
+</p>
+<p>For the users of <em>OpenJDK</em> 7 and 8, <em>OpenJFX</em>, the opensource implementation of JavaFX, is not included yet (it will be starting with OpenJDK 9). Luckily, many Linux distributions ship a separate OpenJFX package by now, but for those that don&rsquo;t, the OpenJDK wiki has an article <a href="https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX">&ldquo;Building OpenJFX&rdquo;</a>. Alternatively, you can of course install the Oracle JDK manually.
+</p>
+<hr>
+<a name="Getting-started"></a>
+<div class="header">
+<p>
+Next: <a href="#Coding-a-scenegraph" accesskey="n" rel="next">Coding a scenegraph</a>, Previous: <a href="#Installation-and-deployment" accesskey="p" rel="prev">Installation and deployment</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="Getting-started-1"></a>
+<h2 class="chapter">2 Getting started</h2>
+
+<p><code>(require '[clojurefx.clojurefx :as fx])</code>
+</p>
+<p>To get the JavaFX environment up and running, you can&rsquo;t just initialize some classes and fire up a window, as is the case with Swing; you first have to initialise the environment. For this, you have two choices: either use a &ldquo;nasty hack&rdquo; Oracle themselves show, or go down the Java road and subclass &lsquo;<code>javafx.application.Application</code>&rsquo;.
+</p>
+<p>For the &ldquo;nasty hack&rdquo;, you have to add a <code>defonce</code> <em>before</em> you import JavaFX classes (so, best suited for a <samp>core.clj</samp> ns). You can then manually create a <code>Stage</code> and add a <code>Scene</code> to it.
+</p>
+<p><code>(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))</code>
+</p>
+<p>Subclassing &lsquo;<code>javafx.application.Application</code>&rsquo; is a tad more work and requires you to aot-compile the namespace:
+</p>
+<div class="lisp">
+<pre class="lisp">(ns example.core
+  (:require [clojurefx.clojurefx :as fx])
+  (:gen-class :main true
+              :extends javafx.application.Application))
+
+(defn -init [this]
+  nil)
+
+(defn -start [this ^javafx.stage.Stage stage]
+  (.show stage))
+
+(defn -stop [this]
+  nil)
+
+(defn -main [&amp; args]
+    (javafx.application.Application/launch example.core args))
+</pre></div>
+
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="#Core-API" accesskey="1">Core API</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+<hr>
+<a name="Core-API"></a>
+<div class="header">
+<p>
+Up: <a href="#Getting-started" accesskey="u" rel="up">Getting started</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="Core-API-1"></a>
+<h3 class="section">2.1 Core API</h3>
+
+<dl>
+<dt><a name="index-run_002dnow"></a>clojurefx.clojurefx: <strong>run-now</strong> <em>code</em></dt>
+<dd><p>This macro runs the code given on the JavaFX thread and blocks the current thread until the execution has finished.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-run_002dlater"></a>clojurefx.clojurefx: <strong>run-later</strong> <em>code</em></dt>
+<dd><p>This macro runs the code given on the JavaFX thread and immediately returns. Prefixing the s-exp with an @ has the same effect as using <code>run-now</code>.
+</p></dd></dl>
+
+<hr>
+<a name="Coding-a-scenegraph"></a>
+<div class="header">
+<p>
+Next: <a href="#FXML-and-controllers" accesskey="n" rel="next">FXML and controllers</a>, Previous: <a href="#Getting-started" accesskey="p" rel="prev">Getting started</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="Coding-a-scenegraph-1"></a>
+<h2 class="chapter">3 Coding a scenegraph</h2>
+
+<p><strong>This part of the library has not been tested for a long time; I will get to it eventually, but expect things to be somewhat broken.</strong>
+</p>
+<div class="lisp">
+<pre class="lisp">(require '[clojurefx.clojure :refer [compile]])
+(compile [VBox {:id &quot;TopLevelVBox&quot;
+                :children [Label {:text &quot;Hi!&quot;}
+                           Label {:text &quot;I'm ClojureFX!&quot;}
+                           HBox {:id &quot;HorizontalBox&quot;
+                                 :children [Button {:text &quot;Alright.&quot;}]}]}])
+</pre></div>
+
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="#Scenegraph-API" accesskey="1">Scenegraph API</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+<hr>
+<a name="Scenegraph-API"></a>
+<div class="header">
+<p>
+Up: <a href="#Coding-a-scenegraph" accesskey="u" rel="up">Coding a scenegraph</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="API"></a>
+<h3 class="section">3.1 API</h3>
+
+<dl>
+<dt><a name="index-compile"></a>clojurefx.clojurefx: <strong>compile</strong> <em>code</em></dt>
+<dd><p>Turns the Hiccup-like tree into a JavaFX-Node.
+</p></dd></dl>
+
+<hr>
+<a name="FXML-and-controllers"></a>
+<div class="header">
+<p>
+Next: <a href="#Event-handling" accesskey="n" rel="next">Event handling</a>, Previous: <a href="#Coding-a-scenegraph" accesskey="p" rel="prev">Coding a scenegraph</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="FXML-and-controllers-1"></a>
+<h2 class="chapter">4 FXML and controllers</h2>
+
+<p><code>(require '[clojurefx.fxml :as fxml])</code>
+</p>
+<p><acronym>FXML</acronym> is an <acronym>XML</acronym> format describing a JavaFX user interface. It also allows defining action handlers and, similar to HTML, inline scripting via script tags. You can find an introduction <a href="https://docs.oracle.com/javase/8/javafx/api/javafx/fxml/doc-files/introduction_to_fxml.html">on this site</a>.
+</p>
+<p>ClojureFX provides an idiomatic interface to load FXML files, and in this new version can even generate a controller class for you at runtime.
+</p>
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="#Loading-FXML-files" accesskey="1">Loading FXML files</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Generating-controller-classes" accesskey="2">Generating controller classes</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#FXML-scripting" accesskey="3">FXML scripting</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#FXML-API" accesskey="4">FXML API</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+<hr>
+<a name="Loading-FXML-files"></a>
+<div class="header">
+<p>
+Next: <a href="#Generating-controller-classes" accesskey="n" rel="next">Generating controller classes</a>, Up: <a href="#FXML-and-controllers" accesskey="u" rel="up">FXML and controllers</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="Loading-FXML-files-1"></a>
+<h3 class="section">4.1 Loading FXML files</h3>
+
+<p>So you created an <acronym>FXML</acronym> file, probably with the SceneBuilder, and obviously now want to use it in your application. Doing so looks tedious in the JavaFX docs, but it is actually straightforward. All you need is some place to add the loaded Node - this could be the Scene object, or simply any JavaFX Parent element. The loader function returns a pure javafx.scene.Node-based object.
+</p>
+<div class="lisp">
+<pre class="lisp">(require '[clojurefx.fxml :as fxml])
+(def mainwindow (fxml/load-fxml &quot;resources/fxml/mainwindow.fxml&quot;))
+     ;; =&gt; javafx.scene.Node
+(.setContent my-scroll-pane mainwindow)
+</pre></div>
+
+<p>You&rsquo;re already good to go!
+</p>
+<hr>
+<a name="Generating-controller-classes"></a>
+<div class="header">
+<p>
+Next: <a href="#FXML-scripting" accesskey="n" rel="next">FXML scripting</a>, Previous: <a href="#Loading-FXML-files" accesskey="p" rel="prev">Loading FXML files</a>, Up: <a href="#FXML-and-controllers" accesskey="u" rel="up">FXML and controllers</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="Generating-controller-classes-1"></a>
+<h3 class="section">4.2 Generating controller classes</h3>
+
+<p>When creating an <acronym>FXML</acronym> file, you have built-in features to bind properties and call functions in an associated controller class. Before actually writing any Clojure, let&rsquo;s see how you can prepare your <acronym>FXML</acronym> file to get the most out of it.
+</p>
+<p>First, at your outermost element in the file, you have to tell it the class name of its <acronym>JVM</acronym> sibling it is going to call. For that, open it, and add the <samp>fx:controller</samp> attribute: <code>fx:controller=&quot;ch.lyrion.MyController&quot;</code>. It is not very important how you name the class, as long as it has a package and doesn&rsquo;t exist anywhere else.
+</p>
+<p>To bind any element to your new controller (in the form of a <code>Property</code>), you need the <samp>fx:id</samp> attribute. Let&rsquo;s try it with that label: <code>&lt;Label fx:id=&quot;MyLabel&quot; /&gt;</code>. That way, you&rsquo;ll always have access to it as long as you have the controller instance with you. Note that the CamelCase will be automatically converted to kebab-case when using the designated accessors from ClojureFX!
+</p>
+<p>Next, you can define action handlers. Note that &ldquo;<em>Special Handlers</em>&rdquo; (<a href="https://docs.oracle.com/javase/8/javafx/api/javafx/fxml/doc-files/introduction_to_fxml.html#collections_and_property_handlers">as defined here</a>) are not yet fully supported; I&rsquo;m working on them! You simply provide the attribute, e.g. an <samp>onAction</samp> attribute, with the method name prefixed with a pound sign; note that the method name CamelCase will be automatically converted to kebab-case. E.g. <code>&lt;Button onAction=&quot;#buttonClicked&quot; /&gt;</code> will call <code>(button-clicked controller-instance event)</code> in the namespace you provided (see below).
+</p>
+<p>Now, finally, it&rsquo;s time to weld the parts together. But wait! Your <acronym>FXML</acronym> file doesn&rsquo;t have any companion, no controller class, let alone the <code>ch.lyrion.MyController</code> we told it to look for!
+No worries, we got you covered. <a href="#load_002dfxml_002dwith_002dcontroller">load-fxml-with-controller</a> has your and your file&rsquo;s back. It doesn&rsquo;t just load the <acronym>FXML</acronym> and returns a <code>Node</code>, it also parses the source and generates your file&rsquo;s companion on the fly. For that, it needs a couple more infos than <code>load-fxml</code> though: first, of course, the file path, but also the fully qualified clojure function in <code>String</code> form that will be called when the class gets initialized by JavaFX. Note that all action handlers defined above also have to be in the namespace of that function.
+</p>
+<hr>
+<a name="FXML-scripting"></a>
+<div class="header">
+<p>
+Next: <a href="#FXML-API" accesskey="n" rel="next">FXML API</a>, Previous: <a href="#Generating-controller-classes" accesskey="p" rel="prev">Generating controller classes</a>, Up: <a href="#FXML-and-controllers" accesskey="u" rel="up">FXML and controllers</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="FXML-scripting-1"></a>
+<h3 class="section">4.3 FXML scripting</h3>
+
+<p>Unfortunately, FXML scripting is currently broken (outdated JSR-223 implementation). Stay tuned!
+</p>
+<hr>
+<a name="FXML-API"></a>
+<div class="header">
+<p>
+Previous: <a href="#FXML-scripting" accesskey="p" rel="prev">FXML scripting</a>, Up: <a href="#FXML-and-controllers" accesskey="u" rel="up">FXML and controllers</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="API-1"></a>
+<h3 class="section">4.4 API</h3>
+
+<a name="load_002dfxml"></a><dl>
+<dt><a name="index-load_002dfxml"></a>clojurefx.fxml: <strong>load-fxml</strong> <em>filename</em></dt>
+<dd><p>With this command, ClojureFX loads an FXML file and returns it as a <a href="https://docs.oracle.com/javase/8/javafx/api/javafx/scene/Node.html">javafx.scene.Node</a>. Note that the filename will be parsed by <code>clojure.io/resource</code> before loading.
+</p></dd></dl>
+
+<a name="generate_002dcontroller"></a><dl>
+<dt><a name="index-generate_002dcontroller"></a>clojurefx.fxml: <strong>generate-controller</strong> <em>filename init-fn</em></dt>
+<dd><p>Generates a controller using the <code>fx:id</code> definitions in the given <samp>filename</samp>.
+</p></dd></dl>
+
+<a name="load_002dfxml_002dwith_002dcontroller"></a><dl>
+<dt><a name="index-load_002dfxml_002dwith_002dcontroller"></a>clojurefx.fxml: <strong>load-fxml-with-controller</strong> <em>filename init-fn</em></dt>
+<dd><p>Like <a href="#load_002dfxml">load-fxml</a>, but also generates and loads an accompanying controller class using <a href="#generate_002dcontroller">generate-controller</a>.
+</p></dd></dl>
+
+<hr>
+<a name="Event-handling"></a>
+<div class="header">
+<p>
+Next: <a href="#Roadmap" accesskey="n" rel="next">Roadmap</a>, Previous: <a href="#FXML-and-controllers" accesskey="p" rel="prev">FXML and controllers</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="Event-handling-1"></a>
+<h2 class="chapter">5 Event handling</h2>
+
+<p><strong>Coming soon.</strong>
+</p>
+<hr>
+<a name="Roadmap"></a>
+<div class="header">
+<p>
+Next: <a href="#Index" accesskey="n" rel="next">Index</a>, Previous: <a href="#Event-handling" accesskey="p" rel="prev">Event handling</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="Roadmap-1"></a>
+<h2 class="chapter">6 Roadmap</h2>
+
+<ul>
+<li> Allow for non-ActionEvent binding.
+</li><li> Testing and fixing Scenegraph coding API.
+</li><li> Fixing JSR-223 implementation.
+</li></ul>
+
+<hr>
+<a name="Index"></a>
+<div class="header">
+<p>
+Previous: <a href="#Roadmap" accesskey="p" rel="prev">Roadmap</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="#Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<a name="Index-1"></a>
+<h2 class="unnumbered">Index</h2>
+
+<table><tr><th valign="top">Jump to: &nbsp; </th><td><a class="summary-letter" href="#Index_fn_letter-C"><b>C</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Index_fn_letter-G"><b>G</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Index_fn_letter-L"><b>L</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Index_fn_letter-R"><b>R</b></a>
+ &nbsp; 
+</td></tr></table>
+<table class="index-fn" border="0">
+<tr><td></td><th align="left">Index Entry</th><td>&nbsp;</td><th align="left"> Section</th></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Index_fn_letter-C">C</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-compile"><code>compile</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Scenegraph-API">Scenegraph API</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Index_fn_letter-G">G</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-generate_002dcontroller"><code>generate-controller</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#FXML-API">FXML API</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Index_fn_letter-L">L</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-load_002dfxml"><code>load-fxml</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#FXML-API">FXML API</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-load_002dfxml_002dwith_002dcontroller"><code>load-fxml-with-controller</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#FXML-API">FXML API</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Index_fn_letter-R">R</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-run_002dlater"><code>run-later</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Core-API">Core API</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-run_002dnow"><code>run-now</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Core-API">Core API</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+</table>
+<table><tr><th valign="top">Jump to: &nbsp; </th><td><a class="summary-letter" href="#Index_fn_letter-C"><b>C</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Index_fn_letter-G"><b>G</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Index_fn_letter-L"><b>L</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Index_fn_letter-R"><b>R</b></a>
+ &nbsp; 
+</td></tr></table>
+
+<hr>
+
+
+
+</body>
+</html>
