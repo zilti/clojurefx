@@ -113,7 +113,7 @@
   (if-not (nil? entry)
     (let [mv (.visitMethod cw 0
                            (subs entry 1)
-                           "(Ljavafx/event/ActionEvent;)V"
+                           "(Ljavafx/event/Event;)V"
                            nil nil)]
       (debug "Generating handler" (subs entry 1) "for" entry)
       (-> (.visitAnnotation mv "Ljavafx/fxml/FXML;" true)
