@@ -11,11 +11,11 @@
 
 (timbre/refer-timbre)
 
-;; ## Scenegraph
+;; ## Functional interfaces
 
 (defmacro fi
+  "This macro is used to make use of functional interfaces. The class name of the functional interface has to be given."
   [interface args & code]
-  (debug "interface:" interface) 
   (let [iface-ref (reflect/type-reflect interface) 
         methods (filter #(instance? clojure.reflect.Method %) (:members iface-ref))
         functional-method (filter (fn [x] (some #(= % :abstract) (:flags x))) methods) 
@@ -32,7 +32,43 @@
        (~method-sym ~args
         ~@code))))
 
-(defmacro handle [obj prop fun]
+(defn- map2
+  "Like map, but takes two elements at a time."
+  ([fun a b] (list (fun a b)))
+  ([fun [a b & coll]]
+    (cons (fun a b) (map2 fun coll))))
+
+(defn typematcher
+  [arg-types methods]
+  (let [method (first methods)]
+    (cond (or (nil? method) (empty? method)) nil
+
+          (and (= (count arg-types) (count (:parameter-types method)))
+               (every? #(isa? (first %) (second %)) (interleave arg-types (:parameter-types method))))
+          method
+
+          :else
+          (recur arg-types (rest methods)))))
+
+(defmacro connect
+  "This macro is used to make use of functional interfaces. The args list has to be provided with the arg types, like in Java: [Type name1 Type name2]."
+  [instance args & code]
+  (let [class-ref (reflect/type-reflect (class instance))
+        ifaces (flatten (map reflect/type-reflect (into #{} (:bases class-ref))))
+        methods (filter #(instance? clojure.reflect.Method %) (:members ifaces))
+        functional-methods (filter (fn [x] (some #(= % :abstract) (:flags x))) methods)
+        arg-types (map2 (fn [a _] a) args)
+        method (typematcher arg-types functional-methods)]
+    (debug "method-sym:" (:name method))
+
+    `(proxy [~(:declaring-class method)] []
+       (~(:name method) ~(map2 (fn [_ b] b) args)
+         ~@code))
+    ))
+
+(defmacro handle
+  ""
+  [obj prop fun]
   (let [argument (->> fun (drop 1) first)
         code (drop 2 fun)]
     `(.setValue (~(symbol (str (name obj) "/" (name prop)))) (fi javafx.event.ActionEvent ~argument ~@code))))

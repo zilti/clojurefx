@@ -1,13 +1,17 @@
 (ns clojurefx.fxml-test
   (:require [clojurefx.fxml :as sut]
+            [clojure.core.async :as async :refer [<! >! chan go go-loop]]
             [clojure.test :as t]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [taoensso.timbre :as timbre]))
+(timbre/refer-timbre)
 
 (defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))
 
 (def test1-fxml (io/resource "fxml/exampleWindow.fxml"))
 
 (t/deftest fxml-loading
+  (debug "FXML loading")
   (t/is (instance? javafx.scene.Node (sut/load-fxml test1-fxml))))
 
 (def test2-fxml (io/resource "fxml/exampleControllerWindow.fxml"))

@@ -41,7 +41,7 @@
   (debug (str (str/replace pkg #"\." "/") "/" classname))
 
   (let [cw (new org.objectweb.asm.ClassWriter 0)
-        clazz (.visit cw Opcodes/V1_8
+        clazz (.visit cw Opcodes/V1_7
                       (+ Opcodes/ACC_PUBLIC Opcodes/ACC_SUPER)
                       (str (str/replace pkg #"\." "/") "/" classname)
                       nil
@@ -101,7 +101,7 @@
                           (get-in entry [:attrs :fx:id])
                           (str "L" (qualify-class import-classes (name (:tag entry))) ";")
                           nil nil)]
-      (debug "Generating" (get-in entry [:attrs :fx:id]) "with type" (qualify-class import-classes (name (:tag entry))))
+      (trace "Generating" (get-in entry [:attrs :fx:id]) "with type" (qualify-class import-classes (name (:tag entry))))
       (-> (.visitAnnotation fv "Ljavafx/fxml/FXML;" true)
           .visitEnd)
       (.visitEnd fv)
@@ -115,7 +115,7 @@
                            (subs entry 1)
                            "(Ljavafx/event/Event;)V"
                            nil nil)]
-      (debug "Generating handler" (subs entry 1) "for" entry)
+      (trace "Generating handler" (subs entry 1) "for" entry)
       (-> (.visitAnnotation mv "Ljavafx/fxml/FXML;" true)
           .visitEnd)
       (.visitCode mv)
@@ -135,7 +135,7 @@
 
 (defn gen-initializer [cw [clj-ns clj-fn]]
   {:post [(s/valid? (partial instance? org.objectweb.asm.ClassWriter) %)]}
-  (debug clj-ns clj-fn)
+  (trace clj-ns clj-fn)
   (let [mv (.visitMethod cw Opcodes/ACC_PUBLIC "initialize" "()V" nil nil)
         init-mv (.visitMethod cw Opcodes/ACC_PUBLIC "<init>" "()V" nil nil)]
     (.visitCode mv)
@@ -168,7 +168,7 @@
         propped-class (gen-props inited-class fxid-elems import-classes)
         initializer-class (gen-initializer propped-class [clj-ns clj-fn])
         handled-class (gen-handlers initializer-class handler-fns clj-ns)]
-    (debug (pr-str handler-fns))
+    (trace (pr-str handler-fns))
     (.visitEnd handled-class)
     (.toByteArray handled-class)))
 

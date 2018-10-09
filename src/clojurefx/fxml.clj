@@ -10,6 +10,7 @@
 (def generate-controller clojurefx.controllergen/gen-fx-controller-class)
 
 (defn load-fxml-with-controller [filename init-fn]
-  (generate-controller filename init-fn)
-  (load-fxml filename))
+  (let [init-fn (if (string? init-fn) init-fn (str init-fn))]
+    (generate-controller filename init-fn)
+    (load-fxml filename)))
 
