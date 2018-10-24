@@ -4,12 +4,16 @@
             [clojure.zip :as zip]
             [clojure.reflect :as reflect]
             [clojure.string :as str]
-            [swiss.arrows :refer :all])
+            [swiss.arrows :refer :all]
+            [clojure.spec.alpha :as s])
   (:import (javafx.scene.layout Region)
            (javafx.scene.shape Rectangle)
            (clojurefx.ApplicationInitializer)))
 
 (timbre/refer-timbre)
+
+;; ## Specs
+(s/def ::node (partial instance? javafx.scene.Node))
 
 ;; ## Functional interfaces
 
@@ -137,6 +141,61 @@
 (defn invoke-constructor [clazz args]
   (info "Constructing" clazz "with" (first args))
   (clojure.lang.Reflector/invokeConstructor clazz (into-array args)))
+
+
+;; ## Scene graph walker
+(defn- has-method? [node method]
+  (not (empty? (clojure.lang.Reflector/getMethods (class node) 0 method false))))
+
+(defn- graph-node-has-children? [node]
+  {:pre [(s/valid? ::node node)]
+   :post [boolean?]}
+  (or (has-method? node "getChildren")
+      (has-method? node "getGraphic")
+      (has-method? node "getMenus")
+      (has-method? node "getColumns")
+      (has-method? node "getContent")
+      (has-method? node "getTabs")
+      (has-method? node "getItems"))
+  )
+
+(defn- graph-node-get-children [node]
+  {:pre [(s/valid? ::node node)]
+   :post [coll?]}
+  (cond (has-method? node "getChildren") (.getChildren node)
+        (has-method? node "getGraphic")  (.getGraphic node)
+        (has-method? node "getMenus")    (.getMenus node)
+        (has-method? node "getContent")  (.getContent node)
+        (has-method? node "getTabs")     (.getTabs node)
+        (has-method? node "getColumns")  (.getColumns node)
+        (has-method? node "getItems")    (.getItems node))
+  )
+
+(defn scenegraph-zipper [node]
+  (zip/zipper graph-node-has-children? graph-node-get-children nil node))
+
+(defn- flat-zipper [zipper]
+  (let [next (zip/next zipper)]
+    (if (zip/end? next)
+      (node next)
+      (lazy-seq (cons (node next) next)))))
+
+(defn find-child-by-id [node id]
+  {:pre [(s/valid? ::node node)
+         (string? id)]
+   :post [#(or (s/valid? ::node node) nil?)]}
+  (let [zipper (scenegraph-zipper node)]
+    (filter #(= id (.getId %)) (flat-zipper zipper))))
+
+(defn- contains-class? [coll clazz]
+  (> 0 (count (filter #(= % clazz) coll))))
+
+(defn find-child-by-class [node clazz]
+  {:pre [(s/valid? ::node node)
+         (string? id)]
+   :post [#(or (s/valid? ::node node) nil?)]}
+  (let [zipper (scenegraph-zipper node)]
+    (filter #(contains-class? (.getStyleClass %) clazz) (flat-zipper zipper))))
 
 ;; ## Properties
 

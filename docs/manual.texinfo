@@ -90,7 +90,7 @@ This macro runs the code given on the JavaFX thread and immediately returns. Pre
 @node Coding a scenegraph
 @chapter Coding a scenegraph
 
-@strong{This part of the library has not been tested for a long time; I will get to it eventually, but expect things to be somewhat broken.}
+@strong{This part of the library is not yet completed; mainly, the problem is that some objects can have children while not being a Parent.}
 
 @lisp
 (require '[clojurefx.clojure :refer [compile]])
