@@ -144,7 +144,7 @@
 
 ;; ## Scene graph walker
 (defn- has-method? [node method]
-  (not (empty? (clojure.lang.Reflector/getMethods (class node) 0 method false))))
+  (and (not (nil? node)) (not (empty? (clojure.lang.Reflector/getMethods (class node) 0 method false)))))
 
 (defn- graph-node-has-children? [node]
   ;{:pre [(s/valid? ::node node)]
@@ -162,7 +162,6 @@
 (defn- graph-node-get-children [node]
   {:pre [(s/valid? ::node node)]
    :post [coll?]}
-  (debug "Getting children from" node)
   (cond (has-method? node "getChildren") (.getChildren node)
         (has-method? node "getGraphic")  [(.getGraphic node)]
         (has-method? node "getMenus")    (.getMenus node)
@@ -193,19 +192,16 @@
 (defn- contains-class? [node clazz]
   {:pre [(s/valid? ::node node) (string? clazz)]
    :post [boolean?]}
-  (debug "NODETEST:" node)
   (s/valid? ::node node)
   (if (instance? javafx.scene.Scene node)
     false
-    (> 0 (count (filter #(= % clazz) (.getStyleClass node))))))
+    (< 0 (count (filter #(= % clazz) (.getStyleClass node))))))
 
 (defn find-child-by-class [node clazz]
   {:pre [(s/valid? ::node node)
          (string? clazz)]
    :post [#(or (s/valid? ::node node) nil?)]}
-  (debug "NODE:" node)
   (let [zipper (scenegraph-zipper node)]
-    (debug "ZIPPER:" zipper)
     (filter #(contains-class? % clazz) (flat-zipper zipper))))
 
 ;; ## Properties
