@@ -147,8 +147,8 @@
   (not (empty? (clojure.lang.Reflector/getMethods (class node) 0 method false))))
 
 (defn- graph-node-has-children? [node]
-  {:pre [(s/valid? ::node node)]
-   :post [boolean?]}
+  ;{:pre [(s/valid? ::node node)]
+  ; :post [boolean?]}
   (or (has-method? node "getChildren")
       (has-method? node "getGraphic")
       (has-method? node "getMenus")
