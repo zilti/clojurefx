@@ -13,7 +13,7 @@
 (timbre/refer-timbre)
 
 ;; ## Specs
-(s/def ::node (partial instance? javafx.scene.Node))
+(s/def ::node (fn [x] (or (instance? javafx.scene.Node x) (instance? javafx.scene.Scene x))))
 
 ;; ## Functional interfaces
 
@@ -142,7 +142,6 @@
   (info "Constructing" clazz "with" (first args))
   (clojure.lang.Reflector/invokeConstructor clazz (into-array args)))
 
-
 ;; ## Scene graph walker
 (defn- has-method? [node method]
   (not (empty? (clojure.lang.Reflector/getMethods (class node) 0 method false))))
@@ -156,29 +155,33 @@
       (has-method? node "getColumns")
       (has-method? node "getContent")
       (has-method? node "getTabs")
-      (has-method? node "getItems"))
+      (has-method? node "getItems")
+      (has-method? node "getRoot"))
   )
 
 (defn- graph-node-get-children [node]
   {:pre [(s/valid? ::node node)]
    :post [coll?]}
+  (debug "Getting children from" node)
   (cond (has-method? node "getChildren") (.getChildren node)
-        (has-method? node "getGraphic")  (.getGraphic node)
+        (has-method? node "getGraphic")  [(.getGraphic node)]
         (has-method? node "getMenus")    (.getMenus node)
-        (has-method? node "getContent")  (.getContent node)
+        (has-method? node "getContent")  [(.getContent node)]
         (has-method? node "getTabs")     (.getTabs node)
         (has-method? node "getColumns")  (.getColumns node)
-        (has-method? node "getItems")    (.getItems node))
+        (has-method? node "getItems")    (.getItems node)
+        (has-method? node "getRoot")     [(.getRoot node)])
   )
+
+;; (def struct (compile [Scene {:root [VBox {:children [Label {:text "Hi!" :style-class ["test"]}]}]}]))
 
 (defn scenegraph-zipper [node]
   (zip/zipper graph-node-has-children? graph-node-get-children nil node))
 
 (defn- flat-zipper [zipper]
-  (let [next (zip/next zipper)]
-    (if (zip/end? next)
-      (node next)
-      (lazy-seq (cons (node next) next)))))
+  (if (or (zip/end? (zip/next zipper)) (nil? (zip/next zipper)))
+    (zip/node zipper)
+    (lazy-seq (cons (zip/node zipper) (flat-zipper (zip/next zipper))))))
 
 (defn find-child-by-id [node id]
   {:pre [(s/valid? ::node node)
@@ -187,15 +190,23 @@
   (let [zipper (scenegraph-zipper node)]
     (filter #(= id (.getId %)) (flat-zipper zipper))))
 
-(defn- contains-class? [coll clazz]
-  (> 0 (count (filter #(= % clazz) coll))))
+(defn- contains-class? [node clazz]
+  {:pre [(s/valid? ::node node) (string? clazz)]
+   :post [boolean?]}
+  (debug "NODETEST:" node)
+  (s/valid? ::node node)
+  (if (instance? javafx.scene.Scene node)
+    false
+    (> 0 (count (filter #(= % clazz) (.getStyleClass node))))))
 
 (defn find-child-by-class [node clazz]
   {:pre [(s/valid? ::node node)
-         (string? id)]
+         (string? clazz)]
    :post [#(or (s/valid? ::node node) nil?)]}
+  (debug "NODE:" node)
   (let [zipper (scenegraph-zipper node)]
-    (filter #(contains-class? (.getStyleClass %) clazz) (flat-zipper zipper))))
+    (debug "ZIPPER:" zipper)
+    (filter #(contains-class? % clazz) (flat-zipper zipper))))
 
 ;; ## Properties
 
@@ -220,6 +231,7 @@
   (doseq [[k v] propmap]
     (case k
       :children (.add (.getChildren nodeobj) (compile-o-matic v))
+      :style-class (.addAll (.getStyleClass nodeobj) (compile-o-matic v))
       (set-property-value nodeobj k (compile-o-matic v))))
   nodeobj)
 
