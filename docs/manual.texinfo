@@ -5,7 +5,7 @@
 @copying
 This manual is for ClojureFX, version 0.4.0.
 
-Copyright @copyright{} 2017 Daniel Ziltener.
+Copyright @copyright{} 2016-2018 Daniel Ziltener.
 @end copying
 
 @titlepage
@@ -24,7 +24,7 @@ Copyright @copyright{} 2017 Daniel Ziltener.
 @node Top
 @top ClojureFX
 
-This is the documentation to ClojureFX, version 0.4.0.
+This is the documentation to ClojureFX, version 0.5.0.
 @c@end ifnottex
 
 @menu
@@ -40,9 +40,9 @@ This is the documentation to ClojureFX, version 0.4.0.
 @node Installation and deployment
 @chapter Installation and deployment
 
-The first, straightforward part of this is to add the dependency to your @file{project.clj} or @file{build.boot}, which consists simply of adding @code{[clojurefx "0.4.0"]}.
+The first, straightforward part of this is to add the dependency to your @file{project.clj} or @file{build.boot}, which consists simply of adding @code{[clojurefx "0.5.0"]}.
 
-For the users of @emph{OpenJDK} 7 and 8, @emph{OpenJFX}, the opensource implementation of JavaFX, is not included yet (it will be starting with OpenJDK 9). Luckily, many Linux distributions ship a separate OpenJFX package by now, but for those that don't, the OpenJDK wiki has an article @uref{https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX, ``Building OpenJFX''}. Alternatively, you can of course install the Oracle JDK manually.
+For the users of @emph{OpenJDK} 7 and 8, @emph{OpenJFX}, the opensource implementation of JavaFX, is not included. Luckily, many Linux distributions ship a separate OpenJFX package by now, but for those that don't, the OpenJDK wiki has an article @uref{https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX, ``Building OpenJFX''}. Starting with OpenJDK 9, JavaFX is available as a library. Alternatively, you can of course install the Oracle JDK manually.
 
 @node Getting started
 @chapter Getting started
@@ -55,25 +55,24 @@ For the ``nasty hack'', you have to add a @code{defonce} @emph{before} you impor
 
 @code{(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))}
 
-Subclassing @indicateurl{javafx.application.Application} is a tad more work and requires you to aot-compile the namespace:
+Alternatively, and preferredly, you can use @code{start-app}:
 
 @lisp
 (ns example.core
   (:require [clojurefx.clojurefx :as fx])
-  (:gen-class :main true
-              :extends javafx.application.Application))
+  (:gen-class))
 
-(defn -init [this]
+(defn init []
   nil)
 
-(defn -start [this ^javafx.stage.Stage stage]
+(defn start [^javafx.stage.Stage stage]
   (.show stage))
 
-(defn -stop [this]
+(defn stop []
   nil)
 
 (defn -main [& args]
-    (javafx.application.Application/launch example.core args))
+    (fx/start-app init start stop))
 @end lisp
 
 @node Core API
@@ -87,18 +86,38 @@ This macro runs the code given on the JavaFX thread and blocks the current threa
 This macro runs the code given on the JavaFX thread and immediately returns. Prefixing the s-exp with an @@ has the same effect as using @code{run-now}.
 @end deffn
 
+@deffn clojurefx.clojurefx fi interface args & code
+This macro is used to use a Clojure function as a functional interface. The interface name is needed: @code{(fx/fi javafx.event.Event [event] eventhandling-code)}
+@end deffn
+
+@deffn clojurefx.clojurefx connect instance function args & code
+This macro is used to use a Clojure function as a functional interface. The function must be written in kebab case: @code{(fx/connect btn set-on-action [event] (do-something-with event))}
+@end deffn
+
+@deffn clojurefx.clojurefx find-child-by-class node clazz
+With this function, you can find an element / elements in a scenegraph by one of its CSS classes.
+@end deffn
+
+@deffn clojurefx.clojurefx find-child-by-id node id
+Analogous to find-child-by-class, but to find an element by fx:id.
+@end deffn
+
 @node Coding a scenegraph
 @chapter Coding a scenegraph
 
-@strong{This part of the library is not yet completed; mainly, the problem is that some objects can have children while not being a Parent.}
+You can write a scenegraph in-code using the @code{compile} function. It is straightforward, alternating between the class name and the element's properties. Make sure though to either use @code{start-app} function or first initialize the toolkit:
+
+@code{(defonce force-toolkit-init (javafx.embed.swing.JFXPanel.))}
+
+There are no further dependencies for this, since the calls are made using Clojure's reflection API. Let's look at an example:
 
 @lisp
 (require '[clojurefx.clojure :refer [compile]])
-(compile [VBox @{:id "TopLevelVBox"
-                :children [Label @{:text "Hi!"@}
-                           Label @{:text "I'm ClojureFX!"@}
-                           HBox @{:id "HorizontalBox"
-                                 :children [Button @{:text "Alright."@}]@}]@}])
+(compile [Scene @{:root [VBox @{:id "TopLevelVBox"
+                                        :children [Label @{:text "Hi!"@}
+                                                   Label @{:text "I'm ClojureFX!"@}
+                                                   HBox @{:id "HorizontalBox"
+                                                         :children [Button @{:text "Alright."@}]@}]@}]@}])
 @end lisp
 
 @node Scenegraph API
