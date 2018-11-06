@@ -6,8 +6,7 @@
             [clojure.string :as str]
             [swiss.arrows :refer :all]
             [clojure.spec.alpha :as s]
-            [clojure.pprint :refer :all]
-            [shuriken.macro :as sm])
+            [clojure.pprint :refer :all])
   (:import (javafx.scene.layout Region)
            (javafx.scene.shape Rectangle)
            (clojurefx.ApplicationInitializer)
@@ -185,8 +184,7 @@
   )
 
 (defn- graph-node-get-children [node]
-  {:pre  [(s/valid? ::scenegraph node)]
-   :post [coll?]}
+  {:post [coll?]}
   (cond (has-method? node "getChildren") (.getChildren node)
         (has-method? node "getGraphic") [(.getGraphic node)]
         (has-method? node "getMenus") (.getMenus node)
@@ -209,7 +207,7 @@
     (lazy-seq (cons (zip/node zipper) (flat-zipper (zip/next zipper))))))
 
 (defn- has-id? [node id]
-  {:pre  [(s/valid? ::scenegraph node) (string? id)]
+  {:pre  [any? (string? id)]
    :post [boolean?]}
   (if (s/valid? ::node node)
     (= id (.getId node))
