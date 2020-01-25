@@ -5,4 +5,4 @@
 
 # ClojureFX
 
-Bidirectionally synced GitHub mirror for [the ClojureFX repository](https://lyrion.ch/opensource/repositories/clojurefx).
+Bidirectionally synced GitHub mirror for [the ClojureFX repository](https://gitea.lyrion.ch/zilti/clojurefx).
