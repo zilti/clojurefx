@@ -4,7 +4,6 @@
             [clojure.zip :as zip]
             [clojure.reflect :as reflect]
             [clojure.string :as str]
-            [swiss.arrows :refer :all]
             [clojure.spec.alpha :as s]
             [clojure.pprint :refer :all])
   (:import (javafx.scene.layout Region)

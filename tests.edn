@@ -1,0 +1,5 @@
+#kaocha/v1
+{:bindings {}
+ :tests [{:source-paths ["src"]
+          :test-paths ["test"]}]
+ :reporter [kaocha.report/documentation]}
